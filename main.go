@@ -24,7 +24,9 @@ type controller struct {
 
 type worker struct {
 	ID     string
+	Commit string
 	URL    string
+	Port   string
 	Status string
 }
 
@@ -36,6 +38,10 @@ type giteaPushEventData struct {
 	} `json:"repository"`
 }
 
+func newWorkerID() string {
+	return time.Now().Format("20060102150405.000000")
+}
+
 func (c *controller) startWorker(workChan chan worker) {
 	defer c.wg.Done()
 
@@ -43,8 +49,10 @@ func (c *controller) startWorker(workChan chan worker) {
 		select {
 		case wrk := <-workChan:
 			env := append(os.Environ(),
-				fmt.Sprintf("COMMIT_ID=%s", wrk.ID),
+				fmt.Sprintf("JOB_ID=%s", wrk.ID),
+				fmt.Sprintf("COMMIT_ID=%s", wrk.Commit),
 				fmt.Sprintf("REPO_URL=%s", wrk.URL),
+				fmt.Sprintf("JOB_PORT=%s", wrk.Port),
 			)
 			cmd := exec.Cmd{Dir: c.Workdir, Env: env, Path: "/usr/bin/make", Args: []string{"build"}}
 			output, err := cmd.CombinedOutput()
@@ -94,7 +102,7 @@ func (c *controller) startWebhook(workChan chan worker) {
 			}
 
 			select {
-			case workChan <- worker{ID: data.CommitID, URL: data.Repository.URL, Status: "init"}:
+			case workChan <- worker{ID: newWorkerID(), Commit: data.CommitID, URL: data.Repository.URL, Port: "cat/port", Status: "init"}:
 				fmt.Fprint(w, "Build started")
 				return
 			default:

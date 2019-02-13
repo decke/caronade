@@ -67,7 +67,7 @@ func (c *controller) startWebhook(workChan chan worker) {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
-			fmt.Fprint(w, "Welcome to caronade")
+			fmt.Fprint(w, "nothing to see here")
 		} else {
 			payload, err := ioutil.ReadAll(r.Body)
 			if err != nil {

@@ -35,10 +35,6 @@ type giteaPushEventData struct {
 	} `json:"repository"`
 }
 
-func newWorkerID() string {
-	return time.Now().Format("20060102150405.000000")
-}
-
 func (c *controller) startWorker(workChan chan worker) {
 	defer c.wg.Done()
 
@@ -85,9 +81,11 @@ func (c *controller) startWebhook(workChan chan worker) {
 				return
 			}
 
-			if data.Secret != c.Secret {
-				http.Error(w, "Invalid secret", http.StatusBadRequest)
-				return
+			if c.Secret != "" {
+				if data.Secret != c.Secret {
+					http.Error(w, "Invalid secret", http.StatusBadRequest)
+					return
+				}
 			}
 
 			select {

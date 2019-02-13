@@ -13,7 +13,8 @@ import (
 
 type controller struct {
 	Workdir string
-        Host    string
+	Logdir  string
+	Host    string
 }
 
 type worker struct {
@@ -37,42 +38,49 @@ func (c *controller) startWorker(workChan chan worker) {
 			} else {
 				wrk.Status = "success"
 			}
-			ioutil.WriteFile(path.Join(c.Workdir, wrk.ID + ".txt"), output, 0600)
+			ioutil.WriteFile(path.Join(c.Logdir, wrk.ID+".txt"), output, 0600)
 		case <-time.After(time.Second * 1):
 		}
 	}
 }
 
 func (c *controller) startWebhook(workChan chan worker) {
-	http.HandleFunc("/webhook/", func(rw http.ResponseWriter, r *http.Request) {
-		if r.Method == "POST" {
+	fs := http.FileServer(http.Dir("logs"))
+	http.Handle("/logs/", http.StripPrefix("/logs/", fs))
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			fmt.Fprint(w, "Welcome to caronade")
+		} else {
 			select {
 			case workChan <- worker{ID: newWorkerID(), URL: "your-url", Status: "init"}:
-				fmt.Fprint(rw, "Build started")
+				fmt.Fprint(w, "Build started")
 				return
 			default:
-				http.Error(rw, "Build already in progress", http.StatusConflict)
+				http.Error(w, "Build already in progress", http.StatusConflict)
 				return
 			}
-		} else {
-			fmt.Fprint(rw, "Not implemented")
 		}
 	})
+
 	log.Printf("Listening on %s\n", c.Host)
 	http.ListenAndServe(c.Host, nil)
 }
 
 func main() {
 	var workdir string
+	var logdir string
 	var host string
 
-	flag.StringVar(&workdir, "workdir", "wrkdir", "Working directory")
+	flag.StringVar(&workdir, "workdir", "work", "Working directory")
+	flag.StringVar(&logdir, "logdir", "logs", "Buildlogs directory")
 	flag.StringVar(&host, "host", ":3000", "Interface and port to listen on")
 	flag.Parse()
 
 	ctrl := controller{
 		Workdir: workdir,
- 		Host:    host,
+		Logdir:  logdir,
+		Host:    host,
 	}
 
 	workChannel := make(chan worker, 1)

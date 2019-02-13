@@ -123,6 +123,7 @@ func main() {
 	wg := sync.WaitGroup{}
 
 	ctrl := controller{
+		wg:      &wg,
 		Workdir: workdir,
 		Logdir:  logdir,
 		Host:    host,

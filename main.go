@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"path"
 	"sync"
@@ -41,7 +42,11 @@ func (c *controller) startWorker(workChan chan worker) {
 	for {
 		select {
 		case wrk := <-workChan:
-			cmd := exec.Cmd{Dir: c.Workdir, Path: "/usr/bin/make", Args: []string{"build"}}
+			env := append(os.Environ(),
+				fmt.Sprintf("COMMIT_ID=%s", wrk.ID),
+				fmt.Sprintf("REPO_URL=%s", wrk.URL),
+			)
+			cmd := exec.Cmd{Dir: c.Workdir, Env: env, Path: "/usr/bin/make", Args: []string{"build"}}
 			output, err := cmd.CombinedOutput()
 			if err != nil {
 				wrk.Status = "failed"

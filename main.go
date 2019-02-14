@@ -10,6 +10,8 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 )
@@ -36,10 +38,49 @@ type giteaPushEventData struct {
 	Repository struct {
 		URL string `json:"clone_url"`
 	} `json:"repository"`
+	Commits []struct {
+		Message string `json:"message"`
+	} `json:"commits"`
 }
 
 func newWorkerID() string {
 	return time.Now().Format("20060102150405.000000")
+}
+
+func getPortFromMessage(msg string) string {
+	lines := strings.Split(msg, "\n")
+
+	if len(lines) < 1 || strings.IndexByte(lines[0], ':') < 1 {
+		return ""
+	}
+
+	re := regexp.MustCompile(`^([a-z0-9-]+)/([a-zA-Z0-9-_.]+)$`)
+
+	port := strings.TrimSpace(lines[0][:strings.IndexByte(lines[0], ':')])
+
+	if re.MatchString(port) {
+		return port
+	}
+
+	return ""
+}
+
+func getCIInfoFromMessage(msg string) bool {
+	lines := strings.Split(msg, "\n")
+
+	for _, line := range lines {
+		line = strings.ToLower(line)
+		if strings.HasPrefix(line, "ci:") {
+			if strings.Contains(line, "no") || strings.Contains(line, "false") {
+				return false
+			}
+			if strings.Contains(line, "yes") || strings.Contains(line, "true") {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 func (c *controller) startWorker(workChan chan worker) {
@@ -101,8 +142,20 @@ func (c *controller) startWebhook(workChan chan worker) {
 				}
 			}
 
+			if getCIInfoFromMessage(data.Commits[0].Message) == false {
+				fmt.Fprint(w, "No build started")
+				return
+			}
+
+			port := getPortFromMessage(data.Commits[0].Message)
+
+			if port == "" {
+				fmt.Fprint(w, "No category/port detected in commit message")
+				return
+			}
+
 			select {
-			case workChan <- worker{ID: newWorkerID(), Commit: data.CommitID, URL: data.Repository.URL, Port: "cat/port", Status: "init"}:
+			case workChan <- worker{ID: newWorkerID(), Commit: data.CommitID, URL: data.Repository.URL, Port: port, Status: "init"}:
 				fmt.Fprint(w, "Build started")
 				return
 			default:

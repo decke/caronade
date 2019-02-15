@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha1"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -38,7 +40,7 @@ type worker struct {
 	RepoFullName string
 }
 
-type giteaPushEventData struct {
+type gitPushEventData struct {
 	Secret string `json:"secret"`
 	CommitID string `json:"after"`
 	Repository struct {
@@ -49,6 +51,13 @@ type giteaPushEventData struct {
 	Commits []struct {
 		Message string `json:"message"`
 	} `json:"commits"`
+}
+
+func calcSignature(payload *[]byte, secret string) string {
+	mac := hmac.New(sha1.New, []byte(secret))
+	mac.Write(*payload)
+
+	return fmt.Sprintf("sha1=%x", mac.Sum(nil))
 }
 
 func newWorkerID() string {
@@ -147,6 +156,7 @@ func (c *controller) startWebhook(workChan chan worker) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
 			fmt.Fprint(w, "nothing to see here")
+			return
 		} else {
 			payload, err := ioutil.ReadAll(r.Body)
 			if err != nil {
@@ -154,21 +164,30 @@ func (c *controller) startWebhook(workChan chan worker) {
 				return
 			}
 
-			if r.Header.Get("X-Gitea-Event") != "push" {
-				http.Error(w, "Invalid webhook", http.StatusBadRequest)
-				return
+			if r.Header.Get("X-GitHub-Event") != "" {
+				if r.Header.Get("X-GitHub-Event") != "push" {
+					http.Error(w, "Invalid webhook", http.StatusBadRequest)
+					return
+				}
 			}
 
-			data := giteaPushEventData{}
+			data := gitPushEventData{}
 			if err = json.Unmarshal(payload, &data); err != nil {
 				http.Error(w, "Failed to parse webhook data", http.StatusBadRequest)
 				return
 			}
 
 			if c.Secret != "" {
-				if data.Secret != c.Secret {
-					http.Error(w, "Invalid secret", http.StatusBadRequest)
-					return
+				if r.Header.Get("X-Hub-Signature") != "" {
+					if calcSignature(&payload, c.Secret) != r.Header.Get("X-Hub-Signature") {
+						http.Error(w, "Invalid secret", http.StatusBadRequest)
+						return
+					}
+				} else {
+					if data.Secret != c.Secret {
+						http.Error(w, "Invalid secret", http.StatusBadRequest)
+						return
+					}
 				}
 			}
 

@@ -109,7 +109,7 @@ func (c *controller) sendStatusUpdate(wrk worker) error {
 
 	url := fmt.Sprintf("%s/repos/%s/statuses/%s?access_token=%s", c.APIURL, wrk.RepoFullName, wrk.Commit, c.APIToken)
 
-	values := map[string]string{"state": wrk.Status, "target_url": target}
+	values := map[string]string{"state": wrk.Status, "target_url": target, "context": "PortsCI"}
 	jsonValue, _ := json.Marshal(values)
 
 	_, err := http.Post(url, "application/json", bytes.NewBuffer(jsonValue))

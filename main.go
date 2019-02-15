@@ -131,7 +131,7 @@ func (c *controller) startWorker(workChan chan worker) {
 				fmt.Sprintf("REPO_URL=%s", wrk.RepoURL),
 				fmt.Sprintf("JOB_PORT=%s", wrk.Port),
 			)
-			cmd := exec.Cmd{Dir: c.Workdir, Env: env, Path: "/usr/bin/make", Args: []string{"build"}}
+			cmd := exec.Cmd{Dir: c.Workdir, Env: env, Path: "/usr/bin/make", Args: []string{"all"}}
 			output, err := cmd.CombinedOutput()
 			if err != nil {
 				wrk.Status = "failure"

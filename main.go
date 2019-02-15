@@ -88,7 +88,7 @@ func getCIInfoFromMessage(msg string) bool {
 		}
 	}
 
-	return false
+	return true
 }
 
 func (c *controller) sendStatusUpdate(wrk worker) error {

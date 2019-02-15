@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -17,25 +18,32 @@ import (
 )
 
 type controller struct {
-	wg      *sync.WaitGroup
-	Workdir string
-	Logdir  string
-	Host    string
-	Secret  string
+	wg       *sync.WaitGroup
+	Workdir  string
+	Logdir   string
+	Host     string
+	BaseURL  string
+	Secret   string
+	APIURL   string
+	APIToken string
 }
 
 type worker struct {
-	ID     string
-	Commit string
-	URL    string
-	Port   string
-	Status string
+	ID           string
+	Status       string
+	Port         string
+	Commit       string
+	RepoURL      string
+	RepoName     string
+	RepoFullName string
 }
 
 type giteaPushEventData struct {
 	Secret string `json:"secret"`
 	CommitID string `json:"after"`
 	Repository struct {
+		Name string `json:"name"`
+		FullName string `json:"full_name"`
 		URL string `json:"clone_url"`
 	} `json:"repository"`
 	Commits []struct {
@@ -83,26 +91,48 @@ func getCIInfoFromMessage(msg string) bool {
 	return false
 }
 
+func (c *controller) sendStatusUpdate(wrk worker) error {
+	target := ""
+
+	if wrk.Status != "pending" {
+		target = fmt.Sprintf("%s/logs/%s.txt", c.BaseURL, wrk.ID)
+	}
+
+	url := fmt.Sprintf("%s/repos/%s/statuses/%s?access_token=%s", c.APIURL, wrk.RepoFullName, wrk.Commit, c.APIToken)
+
+	values := map[string]string{"state": wrk.Status, "target_url": target}
+	jsonValue, _ := json.Marshal(values)
+
+	_, err := http.Post(url, "application/json", bytes.NewBuffer(jsonValue))
+
+	return err
+}
+
 func (c *controller) startWorker(workChan chan worker) {
 	defer c.wg.Done()
 
 	for {
 		select {
 		case wrk := <-workChan:
+			c.sendStatusUpdate(wrk)
+
 			env := append(os.Environ(),
 				fmt.Sprintf("JOB_ID=%s", wrk.ID),
 				fmt.Sprintf("COMMIT_ID=%s", wrk.Commit),
-				fmt.Sprintf("REPO_URL=%s", wrk.URL),
+				fmt.Sprintf("REPO_URL=%s", wrk.RepoURL),
 				fmt.Sprintf("JOB_PORT=%s", wrk.Port),
 			)
 			cmd := exec.Cmd{Dir: c.Workdir, Env: env, Path: "/usr/bin/make", Args: []string{"build"}}
 			output, err := cmd.CombinedOutput()
 			if err != nil {
-				wrk.Status = "failed"
+				wrk.Status = "failure"
 			} else {
 				wrk.Status = "success"
 			}
 			ioutil.WriteFile(path.Join(c.Logdir, wrk.ID+".txt"), output, 0600)
+
+			c.sendStatusUpdate(wrk)
+
 		case <-time.After(time.Second * 1):
 		}
 	}
@@ -155,7 +185,15 @@ func (c *controller) startWebhook(workChan chan worker) {
 			}
 
 			select {
-			case workChan <- worker{ID: newWorkerID(), Commit: data.CommitID, URL: data.Repository.URL, Port: port, Status: "init"}:
+			case workChan <- worker{
+					ID: newWorkerID(),
+					Status: "pending",
+					Port: port,
+					Commit: data.CommitID,
+					RepoURL: data.Repository.URL,
+					RepoName: data.Repository.Name,
+					RepoFullName: data.Repository.FullName,
+					}:
 				fmt.Fprint(w, "Build started")
 				return
 			default:
@@ -173,12 +211,18 @@ func main() {
 	var workdir string
 	var logdir string
 	var host string
+	var baseurl string
 	var secret string
+	var apiurl string
+	var apitoken string
 
 	flag.StringVar(&workdir, "workdir", "work", "Working directory")
 	flag.StringVar(&logdir, "logdir", "logs", "Buildlogs directory")
 	flag.StringVar(&host, "host", ":3000", "Interface and port to listen on")
+	flag.StringVar(&baseurl, "baseurl", "http://localhost:3000/", "Public base URL for build in webserver")
 	flag.StringVar(&secret, "secret", "", "Webhook secret")
+	flag.StringVar(&apiurl, "apiurl", "https://code.bluelife.at/api/v1/", "Base URL to API")
+	flag.StringVar(&apitoken, "apitoken", "", "API Token")
 	flag.Parse()
 
 	wg := sync.WaitGroup{}
@@ -188,7 +232,10 @@ func main() {
 		Workdir: workdir,
 		Logdir:  logdir,
 		Host:    host,
+		BaseURL: strings.TrimSuffix(baseurl, "/"),
 		Secret:  secret,
+		APIURL:  strings.TrimSuffix(apiurl, "/"),
+		APIToken: apitoken,
 	}
 
 	workChannel := make(chan worker, 1)

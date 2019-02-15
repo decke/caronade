@@ -71,7 +71,7 @@ start:
 checkout: clean
 	@printf "= C H E C K O U T =========================================================\n"
 	git clone ${REPO_URL} ${REPODIR}
-	git -C "${REPODIR}" checkout ${COMMIT_ID}
+	git -C "${REPODIR}" -c advice.detachedHead=false checkout ${COMMIT_ID}
 
 prepare:
 	@printf "= P R E P A R E ===========================================================\n"

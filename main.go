@@ -213,7 +213,7 @@ func (c *controller) startWebhook(workChan chan worker) {
 					RepoName: data.Repository.Name,
 					RepoFullName: data.Repository.FullName,
 					}:
-				fmt.Fprint(w, "Build started")
+				fmt.Fprintf(w, "Job queued (queue position %d)", len(workChan))
 				return
 			default:
 				http.Error(w, "Build already in progress", http.StatusConflict)
@@ -257,7 +257,7 @@ func main() {
 		APIToken: apitoken,
 	}
 
-	workChannel := make(chan worker, 1)
+	workChannel := make(chan worker, 10)
 
 	wg.Add(2)
 

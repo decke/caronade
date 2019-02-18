@@ -4,9 +4,9 @@ A small and light tool to help with FreeBSD Ports CI (Continuous Integration).
 
 Whenever you push some code to your Git repository caronade will
 receive a webhook and create build jobs for the affected ports.
-Those jobs will trigger poudriere testport build jobs and the
-result will be reported back to your repository via the GitHub
-Status API.
+Those jobs will call a Makefile which creates poudriere testport
+build jobs and the result will be reported back to your repository
+via the GitHub Status API.
 
 
 ## Main features
@@ -14,6 +14,7 @@ Status API.
 * Simple to setup and maintain (really!)
 * Webhook support ([GitHub](https://github.com/) and [Gitea](https://gitea.io/))
 * Poudriere support for building
+* Using Makefile worker for building (easy to customize!)
 * Supports GitHub/Gitea integration (Status API)
 * Webserver for logfiles with HTTPS support
 

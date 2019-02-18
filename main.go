@@ -24,6 +24,8 @@ type controller struct {
 	Workdir  string
 	Logdir   string
 	Host     string
+	TLScert  string
+	TLSkey   string
 	BaseURL  string
 	Secret   string
 	APIURL   string
@@ -222,14 +224,27 @@ func (c *controller) startWebhook(workChan chan worker) {
 		}
 	})
 
-	log.Printf("Listening on %s\n", c.Host)
-	http.ListenAndServe(c.Host, nil)
+	var err error
+
+	if c.TLScert != "" && c.TLSkey != "" {
+		log.Printf("Listening on %s (https)\n", c.Host)
+		err = http.ListenAndServeTLS(c.Host, c.TLScert, c.TLSkey, nil)
+	} else {
+		log.Printf("Listening on %s (http)\n", c.Host)
+		err = http.ListenAndServe(c.Host, nil)
+	}
+
+	if err != nil {
+		log.Printf("Listen failed: %s\n", err)
+	}
 }
 
 func main() {
 	var workdir string
 	var logdir string
 	var host string
+	var tlscert string
+	var tlskey string
 	var baseurl string
 	var secret string
 	var apiurl string
@@ -238,6 +253,8 @@ func main() {
 	flag.StringVar(&workdir, "workdir", "work", "Working directory")
 	flag.StringVar(&logdir, "logdir", "logs", "Buildlogs directory")
 	flag.StringVar(&host, "host", ":3000", "Interface and port to listen on")
+	flag.StringVar(&tlscert, "tlscert", "", "TLS certificate for HTTPS server")
+	flag.StringVar(&tlskey, "tlskey", "", "TLS key for HTTPS server")
 	flag.StringVar(&baseurl, "baseurl", "http://localhost:3000/", "Public base URL for build in webserver")
 	flag.StringVar(&secret, "secret", "", "Webhook secret")
 	flag.StringVar(&apiurl, "apiurl", "https://code.bluelife.at/api/v1/", "Base URL to API")
@@ -251,6 +268,8 @@ func main() {
 		Workdir: workdir,
 		Logdir:  logdir,
 		Host:    host,
+		TLScert: tlscert,
+		TLSkey:  tlskey,
 		BaseURL: strings.TrimSuffix(baseurl, "/"),
 		Secret:  secret,
 		APIURL:  strings.TrimSuffix(apiurl, "/"),

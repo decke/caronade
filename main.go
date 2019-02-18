@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha1"
+	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -152,10 +153,12 @@ func (c *controller) startWorker(workChan chan worker) {
 func (c *controller) startWebhook(workChan chan worker) {
 	defer c.wg.Done()
 
-	fs := http.FileServer(http.Dir("logs"))
-	http.Handle("/logs/", http.StripPrefix("/logs/", fs))
+	mux := http.NewServeMux()
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	fs := http.FileServer(http.Dir("logs"))
+	mux.Handle("/logs/", http.StripPrefix("/logs/", fs))
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
 			fmt.Fprint(w, "nothing to see here")
 			return
@@ -225,10 +228,27 @@ func (c *controller) startWebhook(workChan chan worker) {
 	})
 
 	var err error
-
 	if c.TLScert != "" && c.TLSkey != "" {
+		cfg := &tls.Config{
+			MinVersion:               tls.VersionTLS12,
+			CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
+			PreferServerCipherSuites: true,
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+				tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+			},
+		}
+		srv := &http.Server{
+			Addr:         c.Host,
+			Handler:      mux,
+			TLSConfig:    cfg,
+			TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
+		}
+
 		log.Printf("Listening on %s (https)\n", c.Host)
-		err = http.ListenAndServeTLS(c.Host, c.TLScert, c.TLSkey, nil)
+		err = srv.ListenAndServeTLS(c.TLScert, c.TLSkey)
 	} else {
 		log.Printf("Listening on %s (http)\n", c.Host)
 		err = http.ListenAndServe(c.Host, nil)

@@ -57,8 +57,7 @@ PORTSPATH!=	zfs get -H mountpoint ${ZPORTSFS} | cut -f3
 .endif
 
 
-#all: start checkout prepare build clean finish
-all: start finish
+all: start checkout prepare build clean finish
 
 start:
 	@printf "===========================================================================\n"

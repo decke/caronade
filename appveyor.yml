@@ -1,0 +1,15 @@
+# appveyor.yml
+build: off
+
+clone_folder: /usr/go/src/code.bluelife.at/decke/caronade
+
+environment:
+  GOPATH: /usr/go/
+
+stack: go 1.10
+
+before_test:
+  - go vet ./...
+
+test_script:
+  - go test ./...

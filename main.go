@@ -44,12 +44,12 @@ type worker struct {
 }
 
 type gitPushEventData struct {
-	Secret string `json:"secret"`
-	CommitID string `json:"after"`
+	Secret     string `json:"secret"`
+	CommitID   string `json:"after"`
 	Repository struct {
-		Name string `json:"name"`
+		Name     string `json:"name"`
 		FullName string `json:"full_name"`
-		URL string `json:"clone_url"`
+		URL      string `json:"clone_url"`
 	} `json:"repository"`
 	Commits []struct {
 		Message string `json:"message"`
@@ -210,14 +210,14 @@ func (c *controller) startWebhook(workChan chan worker) {
 
 			select {
 			case workChan <- worker{
-					ID: newWorkerID(),
-					Status: "pending",
-					Port: port,
-					Commit: data.CommitID,
-					RepoURL: data.Repository.URL,
-					RepoName: data.Repository.Name,
-					RepoFullName: data.Repository.FullName,
-					}:
+				ID:           newWorkerID(),
+				Status:       "pending",
+				Port:         port,
+				Commit:       data.CommitID,
+				RepoURL:      data.Repository.URL,
+				RepoName:     data.Repository.Name,
+				RepoFullName: data.Repository.FullName,
+			}:
 				fmt.Fprintf(w, "Job queued (queue position %d)", len(workChan))
 				return
 			default:
@@ -284,15 +284,15 @@ func main() {
 	wg := sync.WaitGroup{}
 
 	ctrl := controller{
-		wg:      &wg,
-		Workdir: workdir,
-		Logdir:  logdir,
-		Host:    host,
-		TLScert: tlscert,
-		TLSkey:  tlskey,
-		BaseURL: strings.TrimSuffix(baseurl, "/"),
-		Secret:  secret,
-		APIURL:  strings.TrimSuffix(apiurl, "/"),
+		wg:       &wg,
+		Workdir:  workdir,
+		Logdir:   logdir,
+		Host:     host,
+		TLScert:  tlscert,
+		TLSkey:   tlskey,
+		BaseURL:  strings.TrimSuffix(baseurl, "/"),
+		Secret:   secret,
+		APIURL:   strings.TrimSuffix(apiurl, "/"),
 		APIToken: apitoken,
 	}
 

@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -160,7 +161,22 @@ func (c *controller) startWorker(workChan chan worker, qidx int) {
 				fmt.Sprintf("JAIL=%s", queue.Jailname),
 				fmt.Sprintf("PORTSTREE=%s", queue.Portstree),
 			)
-			cmd := exec.Cmd{Dir: c.cfg.Base.Workdir, Env: env, Path: "/usr/bin/make", Args: []string{"all"}}
+
+			workdir := fmt.Sprintf("%s/%s", c.cfg.Base.Workdir, queue.Jailname)
+			os.MkdirAll(workdir, os.ModePerm)
+
+			cmd := exec.Cmd{
+				Dir: workdir,
+				Env: env,
+				Path: "/usr/bin/make",
+				Args: []string{
+					"make",
+					"-C", workdir,
+					"-f", fmt.Sprintf("%s.mk", queue.Recipe),
+					"-I", c.cfg.Base.Workdir,
+					"all",
+				},
+			}
 			output, err := cmd.CombinedOutput()
 			if err != nil {
 				wrk.Status = "failure"
@@ -309,6 +325,8 @@ func ParseConfig(file string) Config {
 		log.Fatalf("Error: %v", err)
 	}
 
+	cfg.Base.Workdir, _ = filepath.Abs(cfg.Base.Workdir)
+	cfg.Base.Logdir, _ = filepath.Abs(cfg.Base.Logdir)
 	cfg.Server.BaseURL = strings.TrimSuffix(cfg.Server.BaseURL, "/")
 	cfg.Repository.APIURL = strings.TrimSuffix(cfg.Repository.APIURL, "/")
 

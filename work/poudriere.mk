@@ -30,7 +30,7 @@ JAIL?=
 #
 # Poudriere portstree used for building
 #
-PORTSTREE?=	default
+PORTSTREE?=	
 
 
 # DON'T TOUCH ANYTHING BELOW HERE

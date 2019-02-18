@@ -6,12 +6,37 @@ base:
 server:
   host: 127.0.0.1:3000
   baseurl: http://localhost:3000/
-#  tlscert: server.crt
-#  tlskey: server.key
+# tlscert: server.crt
+# tlskey: server.key
 
 webhook:
+
+# Create the webhook from the Repository webinterface
+#  github: repository settings -> webhooks -> add webhook
+#    payload url: baseurl from above
+#    content type: application/json
+#    secret: same as below
+#    events: Just the push event
+#
+#  gitea: repository settings -> webhooks -> add webhook (type Gitea)
+#    target url: baseurl from above
+#    content type: application/json
+#    secret: same as below
+#    events: Push events
   secret:
 
 repository:
-  apiurl:
-  apitoken:
+
+# example github:
+#  Token needs to be generated from github webinterface:
+#  user settings -> developer settings -> personal access tokens -> repo:status
+#
+# apiurl: https://api.github.com/
+# apitoken:
+
+# example gitea:
+#  Token needs to be generated from gitea webinterface:
+#  user settings -> applications -> generate token
+#
+# apiurl: https://you-repo.com/api/v1/
+# apitoken:

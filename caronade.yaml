@@ -1,0 +1,17 @@
+# caronade config
+base:
+  workdir: work
+  logdir: logs
+
+server:
+  host: 127.0.0.1:3000
+  baseurl: http://localhost:3000/
+#  tlscert: server.crt
+#  tlskey: server.key
+
+webhook:
+  secret:
+
+repository:
+  apiurl:
+  apitoken:

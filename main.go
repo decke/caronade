@@ -18,19 +18,33 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"gopkg.in/yaml.v2"
 )
 
 type controller struct {
-	wg       *sync.WaitGroup
-	Workdir  string
-	Logdir   string
-	Host     string
-	TLScert  string
-	TLSkey   string
-	BaseURL  string
-	Secret   string
-	APIURL   string
-	APIToken string
+	wg  *sync.WaitGroup
+	cfg *Config
+}
+
+type Config struct {
+	Base struct {
+		Workdir  string
+		Logdir   string
+	}
+	Server struct {
+		Host     string
+		BaseURL  string
+		TLScert  string
+		TLSkey   string
+	}
+	Webhook struct {
+		Secret   string
+	}
+	Repository struct {
+		APIURL   string
+		APIToken string
+	}
 }
 
 type worker struct {
@@ -107,10 +121,10 @@ func (c *controller) sendStatusUpdate(wrk worker) error {
 	target := ""
 
 	if wrk.Status != "pending" {
-		target = fmt.Sprintf("%s/logs/%s.txt", c.BaseURL, wrk.ID)
+		target = fmt.Sprintf("%s/logs/%s.txt", c.cfg.Server.BaseURL, wrk.ID)
 	}
 
-	url := fmt.Sprintf("%s/repos/%s/statuses/%s?access_token=%s", c.APIURL, wrk.RepoFullName, wrk.Commit, c.APIToken)
+	url := fmt.Sprintf("%s/repos/%s/statuses/%s?access_token=%s", c.cfg.Repository.APIURL, wrk.RepoFullName, wrk.Commit, c.cfg.Repository.APIToken)
 
 	values := map[string]string{"state": wrk.Status, "target_url": target, "context": "PortsCI"}
 	jsonValue, _ := json.Marshal(values)
@@ -134,14 +148,14 @@ func (c *controller) startWorker(workChan chan worker) {
 				fmt.Sprintf("REPO_URL=%s", wrk.RepoURL),
 				fmt.Sprintf("JOB_PORT=%s", wrk.Port),
 			)
-			cmd := exec.Cmd{Dir: c.Workdir, Env: env, Path: "/usr/bin/make", Args: []string{"all"}}
+			cmd := exec.Cmd{Dir: c.cfg.Base.Workdir, Env: env, Path: "/usr/bin/make", Args: []string{"all"}}
 			output, err := cmd.CombinedOutput()
 			if err != nil {
 				wrk.Status = "failure"
 			} else {
 				wrk.Status = "success"
 			}
-			ioutil.WriteFile(path.Join(c.Logdir, wrk.ID+".txt"), output, 0600)
+			ioutil.WriteFile(path.Join(c.cfg.Base.Logdir, wrk.ID+".txt"), output, 0600)
 
 			c.sendStatusUpdate(wrk)
 
@@ -182,14 +196,14 @@ func (c *controller) startWebhook(workChan chan worker) {
 				return
 			}
 
-			if c.Secret != "" {
+			if c.cfg.Webhook.Secret != "" {
 				if r.Header.Get("X-Hub-Signature") != "" {
-					if calcSignature(&payload, c.Secret) != r.Header.Get("X-Hub-Signature") {
+					if calcSignature(&payload, c.cfg.Webhook.Secret) != r.Header.Get("X-Hub-Signature") {
 						http.Error(w, "Invalid secret", http.StatusBadRequest)
 						return
 					}
 				} else {
-					if data.Secret != c.Secret {
+					if data.Secret != c.cfg.Webhook.Secret {
 						http.Error(w, "Invalid secret", http.StatusBadRequest)
 						return
 					}
@@ -228,7 +242,7 @@ func (c *controller) startWebhook(workChan chan worker) {
 	})
 
 	var err error
-	if c.TLScert != "" && c.TLSkey != "" {
+	if c.cfg.Server.TLScert != "" && c.cfg.Server.TLSkey != "" {
 		cfg := &tls.Config{
 			MinVersion:               tls.VersionTLS12,
 			CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
@@ -241,17 +255,17 @@ func (c *controller) startWebhook(workChan chan worker) {
 			},
 		}
 		srv := &http.Server{
-			Addr:         c.Host,
+			Addr:         c.cfg.Server.Host,
 			Handler:      mux,
 			TLSConfig:    cfg,
 			TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
 		}
 
-		log.Printf("Listening on %s (https)\n", c.Host)
-		err = srv.ListenAndServeTLS(c.TLScert, c.TLSkey)
+		log.Printf("Listening on %s (https)\n", c.cfg.Server.Host)
+		err = srv.ListenAndServeTLS(c.cfg.Server.TLScert, c.cfg.Server.TLSkey)
 	} else {
-		log.Printf("Listening on %s (http)\n", c.Host)
-		err = http.ListenAndServe(c.Host, nil)
+		log.Printf("Listening on %s (http)\n", c.cfg.Server.Host)
+		err = http.ListenAndServe(c.cfg.Server.Host, nil)
 	}
 
 	if err != nil {
@@ -259,41 +273,42 @@ func (c *controller) startWebhook(workChan chan worker) {
 	}
 }
 
-func main() {
-	var workdir string
-	var logdir string
-	var host string
-	var tlscert string
-	var tlskey string
-	var baseurl string
-	var secret string
-	var apiurl string
-	var apitoken string
+func ParseConfig(file string) Config {
+	f, err := os.Open(file)
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+	defer f.Close()
 
-	flag.StringVar(&workdir, "workdir", "work", "Working directory")
-	flag.StringVar(&logdir, "logdir", "logs", "Buildlogs directory")
-	flag.StringVar(&host, "host", ":3000", "Interface and port to listen on")
-	flag.StringVar(&tlscert, "tlscert", "", "TLS certificate for HTTPS server")
-	flag.StringVar(&tlskey, "tlskey", "", "TLS key for HTTPS server")
-	flag.StringVar(&baseurl, "baseurl", "http://localhost:3000/", "Public base URL for build in webserver")
-	flag.StringVar(&secret, "secret", "", "Webhook secret")
-	flag.StringVar(&apiurl, "apiurl", "https://code.bluelife.at/api/v1/", "Base URL to API")
-	flag.StringVar(&apitoken, "apitoken", "", "API Token")
+	dec := yaml.NewDecoder(f)
+
+	cfg := Config{}
+	err = dec.Decode(&cfg)
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+
+	cfg.Server.BaseURL = strings.TrimSuffix(cfg.Server.BaseURL, "/")
+	cfg.Repository.APIURL = strings.TrimSuffix(cfg.Repository.APIURL, "/")
+
+	log.Printf("CONFIG: %#v\n", cfg)
+
+	return cfg
+}
+
+func main() {
+	var cfgfile string
+
+	flag.StringVar(&cfgfile, "config", "caronade.yaml", "Path to config file")
 	flag.Parse()
+
+	cfg := ParseConfig(cfgfile)
 
 	wg := sync.WaitGroup{}
 
 	ctrl := controller{
-		wg:       &wg,
-		Workdir:  workdir,
-		Logdir:   logdir,
-		Host:     host,
-		TLScert:  tlscert,
-		TLSkey:   tlskey,
-		BaseURL:  strings.TrimSuffix(baseurl, "/"),
-		Secret:   secret,
-		APIURL:   strings.TrimSuffix(apiurl, "/"),
-		APIToken: apitoken,
+		wg:  &wg,
+		cfg: &cfg,
 	}
 
 	workChannel := make(chan worker, 10)

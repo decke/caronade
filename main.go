@@ -23,8 +23,9 @@ import (
 )
 
 type controller struct {
-	wg  *sync.WaitGroup
-	cfg *Config
+	wg     *sync.WaitGroup
+	cfg    *Config
+	queues map[string] chan worker
 }
 
 type Config struct {
@@ -44,6 +45,12 @@ type Config struct {
 	Repository struct {
 		APIURL   string
 		APIToken string
+	}
+	Queues[] struct {
+		Name      string
+		Recipe    string
+		Jailname  string
+		Portstree string
 	}
 }
 
@@ -134,12 +141,15 @@ func (c *controller) sendStatusUpdate(wrk worker) error {
 	return err
 }
 
-func (c *controller) startWorker(workChan chan worker) {
+func (c *controller) startWorker(workChan chan worker, qidx int) {
 	defer c.wg.Done()
 
 	for {
 		select {
 		case wrk := <-workChan:
+			queue := c.cfg.Queues[qidx]
+
+			log.Printf("ID %s started on %s\n", wrk.ID, queue.Name)
 			c.sendStatusUpdate(wrk)
 
 			env := append(os.Environ(),
@@ -147,6 +157,8 @@ func (c *controller) startWorker(workChan chan worker) {
 				fmt.Sprintf("COMMIT_ID=%s", wrk.Commit),
 				fmt.Sprintf("REPO_URL=%s", wrk.RepoURL),
 				fmt.Sprintf("JOB_PORT=%s", wrk.Port),
+				fmt.Sprintf("JAIL=%s", queue.Jailname),
+				fmt.Sprintf("PORTSTREE=%s", queue.Portstree),
 			)
 			cmd := exec.Cmd{Dir: c.cfg.Base.Workdir, Env: env, Path: "/usr/bin/make", Args: []string{"all"}}
 			output, err := cmd.CombinedOutput()
@@ -157,6 +169,7 @@ func (c *controller) startWorker(workChan chan worker) {
 			}
 			ioutil.WriteFile(path.Join(c.cfg.Base.Logdir, wrk.ID+".txt"), output, 0600)
 
+			log.Printf("ID %s finished %s\n", wrk.ID, wrk.Status)
 			c.sendStatusUpdate(wrk)
 
 		case <-time.After(time.Second * 1):
@@ -164,7 +177,7 @@ func (c *controller) startWorker(workChan chan worker) {
 	}
 }
 
-func (c *controller) startWebhook(workChan chan worker) {
+func (c *controller) startWebhook() {
 	defer c.wg.Done()
 
 	mux := http.NewServeMux()
@@ -222,22 +235,25 @@ func (c *controller) startWebhook(workChan chan worker) {
 				return
 			}
 
-			select {
-			case workChan <- worker{
-				ID:           newWorkerID(),
-				Status:       "pending",
-				Port:         port,
-				Commit:       data.CommitID,
-				RepoURL:      data.Repository.URL,
-				RepoName:     data.Repository.Name,
-				RepoFullName: data.Repository.FullName,
-			}:
-				fmt.Fprintf(w, "Job queued (queue position %d)", len(workChan))
-				return
-			default:
-				http.Error(w, "Build already in progress", http.StatusConflict)
-				return
+			for queuename, queue := range(c.queues) {
+				job := worker {
+					ID:           newWorkerID(),
+					Status:       "pending",
+					Port:         port,
+					Commit:       data.CommitID,
+					RepoURL:      data.Repository.URL,
+					RepoName:     data.Repository.Name,
+					RepoFullName: data.Repository.FullName,
+				}
+
+				select {
+				case queue <- job:
+					log.Printf("%s Port %s queued on %s (pos %d)\n", job.ID, job.Port, queuename, len(queue))
+				default:
+					log.Printf("%s Queue limit reached on queue %s\n", job.ID, queuename)
+				}
 			}
+			fmt.Fprintf(w, "Job queued")
 		}
 	})
 
@@ -264,8 +280,13 @@ func (c *controller) startWebhook(workChan chan worker) {
 		log.Printf("Listening on %s (https)\n", c.cfg.Server.Host)
 		err = srv.ListenAndServeTLS(c.cfg.Server.TLScert, c.cfg.Server.TLSkey)
 	} else {
+		srv := &http.Server{
+			Addr:         c.cfg.Server.Host,
+			Handler:      mux,
+		}
+
 		log.Printf("Listening on %s (http)\n", c.cfg.Server.Host)
-		err = http.ListenAndServe(c.cfg.Server.Host, nil)
+		err = srv.ListenAndServe()
 	}
 
 	if err != nil {
@@ -291,8 +312,6 @@ func ParseConfig(file string) Config {
 	cfg.Server.BaseURL = strings.TrimSuffix(cfg.Server.BaseURL, "/")
 	cfg.Repository.APIURL = strings.TrimSuffix(cfg.Repository.APIURL, "/")
 
-	log.Printf("CONFIG: %#v\n", cfg)
-
 	return cfg
 }
 
@@ -304,19 +323,28 @@ func main() {
 
 	cfg := ParseConfig(cfgfile)
 
+	queues := make(map[string] chan worker)
+
 	wg := sync.WaitGroup{}
 
-	ctrl := controller{
-		wg:  &wg,
-		cfg: &cfg,
+	for i := range(cfg.Queues) {
+		log.Printf("Adding queue %s\n", cfg.Queues[i].Name)
+		queues[cfg.Queues[i].Name] = make(chan worker, 10)
 	}
 
-	workChannel := make(chan worker, 10)
+	ctrl := controller{
+		wg:     &wg,
+		cfg:    &cfg,
+		queues: queues,
+	}
 
-	wg.Add(2)
+	for i := range(cfg.Queues) {
+		wg.Add(1)
+		go ctrl.startWorker(queues[cfg.Queues[i].Name], i)
+	}
 
-	go ctrl.startWorker(workChannel)
-	go ctrl.startWebhook(workChannel)
+	wg.Add(1)
+	go ctrl.startWebhook()
 
 	wg.Wait()
 }

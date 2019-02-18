@@ -40,3 +40,19 @@ repository:
 #
 # apiurl: https://you-repo.com/api/v1/
 # apitoken:
+
+queues:
+- name: 11.2/amd64
+  recipe: poudriere
+  portstree: 112amd64
+  jailname: 112amd64
+- name: 12.0/i386
+  recipe: poudriere
+  portstree: 120i386
+  jailname: 120i386
+- name: 12.0/amd64
+  recipe: poudriere
+  portstree: 120amd64
+  jailname: 120amd64
+- name: portlint
+  repice: portlint

@@ -13,8 +13,9 @@ via the GitHub Status API.
 
 * Simple to setup and maintain (really!)
 * Webhook support ([GitHub](https://github.com/) and [Gitea](https://gitea.io/))
-* Poudriere support for building
 * Using Makefile worker for building (easy to customize!)
+* Poudriere support for building
+* Portlint support for checking port files
 * Supports GitHub/Gitea integration (Status API)
 * Webserver for logfiles with HTTPS support
 

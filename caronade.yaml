@@ -61,3 +61,5 @@ queues:
 
 - name: portlint
   recipe: portlint
+
+default_queues [ "12.0/amd64", "portlint" ]

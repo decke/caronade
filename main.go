@@ -26,7 +26,13 @@ import (
 type controller struct {
 	wg     *sync.WaitGroup
 	cfg    *Config
-	queues map[string] chan worker
+}
+
+type Queue struct {
+	Name      string
+	Recipe    string
+	Environment map[string]string
+	queue     chan worker
 }
 
 type Config struct {
@@ -45,16 +51,14 @@ type Config struct {
 		APIURL   string
 		APIToken string
 	}
-	Queues[] struct {
-		Name      string
-		Recipe    string
-		Environment map[string]string
-	}
+	Queues []Queue
+	DefaultQueues []string `yaml:"default_queues"`
 }
 
 type worker struct {
 	ID           string
 	Status       string
+	Queue        Queue
 	Port         string
 	Commit       string
 	RepoURL      string
@@ -104,22 +108,44 @@ func getPortFromMessage(msg string) string {
 	return ""
 }
 
-func getCIInfoFromMessage(msg string) bool {
+func (c *controller) getQueueInfoFromMessage(msg string) []Queue {
+	queues := make([]Queue, 0)
 	lines := strings.Split(msg, "\n")
 
 	for _, line := range lines {
 		line = strings.ToLower(line)
 		if strings.HasPrefix(line, "ci:") {
 			if strings.Contains(line, "no") || strings.Contains(line, "false") {
-				return false
+				return queues
 			}
 			if strings.Contains(line, "yes") || strings.Contains(line, "true") {
-				return true
+				for i := range(c.cfg.Queues) {
+					queues = append(queues, c.cfg.Queues[i])
+				}
+				return queues
 			}
 		}
 	}
 
-	return true
+	for _, name := range(c.cfg.DefaultQueues) {
+		q := c.getQueueByName(name)
+		if q.Name == "" {
+			continue
+		}
+		queues = append(queues, q)
+	}
+
+	return queues
+}
+
+func (c *controller) getQueueByName(name string) Queue {
+	for i := range(c.cfg.Queues) {
+		if c.cfg.Queues[i].Name == name {
+			return c.cfg.Queues[i]
+		}
+	}
+
+	return Queue{}
 }
 
 func (c *controller) sendStatusUpdate(wrk worker) error {
@@ -129,23 +155,27 @@ func (c *controller) sendStatusUpdate(wrk worker) error {
 		target = fmt.Sprintf("%s/logs/%s.txt", c.cfg.Server.BaseURL, wrk.ID)
 	}
 
-	url := fmt.Sprintf("%s/repos/%s/statuses/%s?access_token=%s", c.cfg.Repository.APIURL, wrk.RepoFullName, wrk.Commit, c.cfg.Repository.APIToken)
+	url := fmt.Sprintf("%s/repos/%s/statuses/%s?access_token=%s",
+		c.cfg.Repository.APIURL, wrk.RepoFullName, wrk.Commit, c.cfg.Repository.APIToken)
 
-	values := map[string]string{"state": wrk.Status, "target_url": target, "context": "PortsCI"}
-	jsonValue, _ := json.Marshal(values)
+	jsonValue, _ := json.Marshal(map[string]string{
+		"state": wrk.Status,
+		"target_url": target,
+		"context": wrk.Queue.Name,
+	})
 
 	_, err := http.Post(url, "application/json", bytes.NewBuffer(jsonValue))
 
 	return err
 }
 
-func (c *controller) startWorker(workChan chan worker, qidx int) {
+func (c *controller) startWorker(workChan chan worker) {
 	defer c.wg.Done()
 
 	for {
 		select {
 		case wrk := <-workChan:
-			queue := c.cfg.Queues[qidx]
+			queue := c.getQueueByName(wrk.Queue.Name)
 
 			log.Printf("ID %s started on %s\n", wrk.ID, queue.Name)
 			c.sendStatusUpdate(wrk)
@@ -240,11 +270,6 @@ func (c *controller) startWebhook() {
 				}
 			}
 
-			if getCIInfoFromMessage(data.Commits[0].Message) == false {
-				fmt.Fprint(w, "No build started")
-				return
-			}
-
 			port := getPortFromMessage(data.Commits[0].Message)
 
 			if port == "" {
@@ -252,10 +277,12 @@ func (c *controller) startWebhook() {
 				return
 			}
 
-			for queuename, queue := range(c.queues) {
+			cnt := 0
+			for _, q := range(c.getQueueInfoFromMessage(data.Commits[0].Message)) {
 				job := worker {
 					ID:           newWorkerID(),
 					Status:       "pending",
+					Queue:        q,
 					Port:         port,
 					Commit:       data.CommitID,
 					RepoURL:      data.Repository.URL,
@@ -264,13 +291,14 @@ func (c *controller) startWebhook() {
 				}
 
 				select {
-				case queue <- job:
-					log.Printf("%s Port %s queued on %s (pos %d)\n", job.ID, job.Port, queuename, len(queue))
+				case q.queue <- job:
+					cnt++
+					log.Printf("%s Port %s queued on %s (pos %d)\n", job.ID, job.Port, q.Name, len(q.queue))
 				default:
-					log.Printf("%s Queue limit reached on queue %s\n", job.ID, queuename)
+					log.Printf("%s Queue limit reached on queue %s\n", job.ID, q.Name)
 				}
 			}
-			fmt.Fprintf(w, "Job queued")
+			fmt.Fprintf(w, "%d Jobs queued", cnt)
 		}
 	})
 
@@ -342,24 +370,21 @@ func main() {
 
 	cfg := ParseConfig(cfgfile)
 
-	queues := make(map[string] chan worker)
-
 	wg := sync.WaitGroup{}
 
 	for i := range(cfg.Queues) {
 		log.Printf("Adding queue %s\n", cfg.Queues[i].Name)
-		queues[cfg.Queues[i].Name] = make(chan worker, 10)
+		cfg.Queues[i].queue = make(chan worker, 10)
 	}
 
 	ctrl := controller{
 		wg:     &wg,
 		cfg:    &cfg,
-		queues: queues,
 	}
 
 	for i := range(cfg.Queues) {
 		wg.Add(1)
-		go ctrl.startWorker(queues[cfg.Queues[i].Name], i)
+		go ctrl.startWorker(cfg.Queues[i].queue)
 	}
 
 	wg.Add(1)

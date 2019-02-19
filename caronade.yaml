@@ -1,7 +1,6 @@
 # caronade config
-base:
-  workdir: work
-  logdir: logs
+workdir: work
+logdir: logs
 
 server:
   host: 127.0.0.1:3000
@@ -44,15 +43,21 @@ repository:
 queues:
 - name: 11.2/amd64
   recipe: poudriere
-  portstree: 112amd64
-  jailname: 112amd64
+  environment:
+    JAIL_NAME: 112amd64
+    PORTSTREE: 112amd64
+
 - name: 12.0/i386
   recipe: poudriere
-  portstree: 120i386
-  jailname: 120i386
+  environment:
+    JAIL_NAME: 120i386
+    PORTSTREE: 120i386
+
 - name: 12.0/amd64
   recipe: poudriere
-  portstree: 120amd64
-  jailname: 120amd64
+  environment:
+    JAIL_NAME: 120amd64
+    PORTSTREE: 120amd64
+
 - name: portlint
-  repice: portlint
+  recipe: portlint

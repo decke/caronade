@@ -25,7 +25,7 @@ JOB_PORT?=
 #
 # Poudriere jail used for building
 #
-JAIL?=		
+JAIL_NAME?=		
 
 #
 # Poudriere portstree used for building
@@ -52,8 +52,8 @@ PORTSPATH!=	zfs get -H mountpoint ${ZPORTSFS} | cut -f3
 .error "JOB_PORT variable is not set!"
 .endif
 
-.if empty(JAIL)
-.error "JAIL variable is not set!"
+.if empty(JAIL_NAME)
+.error "JAIL_NAME variable is not set!"
 .endif
 
 
@@ -84,7 +84,7 @@ prepare:
 
 build:
 	@printf "= B U I L D ===============================================================\n"
-	poudriere testport -j ${JAIL} -p ${PORTSTREE} ${JOB_PORT}
+	poudriere testport -j ${JAIL_NAME} -p ${PORTSTREE} ${JOB_PORT}
 
 clean:
 	@printf "= C L E A N ===============================================================\n"

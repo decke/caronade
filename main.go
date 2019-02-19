@@ -30,10 +30,8 @@ type controller struct {
 }
 
 type Config struct {
-	Base struct {
-		Workdir  string
-		Logdir   string
-	}
+	Workdir  string
+	Logdir   string
 	Server struct {
 		Host     string
 		BaseURL  string
@@ -50,8 +48,7 @@ type Config struct {
 	Queues[] struct {
 		Name      string
 		Recipe    string
-		Jailname  string
-		Portstree string
+		Environment map[string]string
 	}
 }
 
@@ -158,11 +155,15 @@ func (c *controller) startWorker(workChan chan worker, qidx int) {
 				fmt.Sprintf("COMMIT_ID=%s", wrk.Commit),
 				fmt.Sprintf("REPO_URL=%s", wrk.RepoURL),
 				fmt.Sprintf("JOB_PORT=%s", wrk.Port),
-				fmt.Sprintf("JAIL=%s", queue.Jailname),
-				fmt.Sprintf("PORTSTREE=%s", queue.Portstree),
 			)
 
-			workdir := fmt.Sprintf("%s/%s", c.cfg.Base.Workdir, queue.Jailname)
+			for k, v := range(queue.Environment) {
+				env = append(env, fmt.Sprintf("%s=%s", k, v))
+			}
+
+			workdir := strings.Replace(queue.Name, "/", "", -1)
+			workdir = strings.Replace(workdir, " ", "", -1)
+			workdir = path.Join(c.cfg.Workdir, workdir)
 			os.MkdirAll(workdir, os.ModePerm)
 
 			cmd := exec.Cmd{
@@ -173,7 +174,7 @@ func (c *controller) startWorker(workChan chan worker, qidx int) {
 					"make",
 					"-C", workdir,
 					"-f", fmt.Sprintf("%s.mk", queue.Recipe),
-					"-I", c.cfg.Base.Workdir,
+					"-I", c.cfg.Workdir,
 					"all",
 				},
 			}
@@ -183,7 +184,7 @@ func (c *controller) startWorker(workChan chan worker, qidx int) {
 			} else {
 				wrk.Status = "success"
 			}
-			ioutil.WriteFile(path.Join(c.cfg.Base.Logdir, wrk.ID+".txt"), output, 0600)
+			ioutil.WriteFile(path.Join(c.cfg.Logdir, wrk.ID+".txt"), output, 0600)
 
 			log.Printf("ID %s finished %s\n", wrk.ID, wrk.Status)
 			c.sendStatusUpdate(wrk)
@@ -325,8 +326,8 @@ func ParseConfig(file string) Config {
 		log.Fatalf("Error: %v", err)
 	}
 
-	cfg.Base.Workdir, _ = filepath.Abs(cfg.Base.Workdir)
-	cfg.Base.Logdir, _ = filepath.Abs(cfg.Base.Logdir)
+	cfg.Workdir, _ = filepath.Abs(cfg.Workdir)
+	cfg.Logdir, _ = filepath.Abs(cfg.Logdir)
 	cfg.Server.BaseURL = strings.TrimSuffix(cfg.Server.BaseURL, "/")
 	cfg.Repository.APIURL = strings.TrimSuffix(cfg.Repository.APIURL, "/")
 

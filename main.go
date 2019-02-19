@@ -224,7 +224,71 @@ func (c *controller) startWorker(workChan chan worker) {
 	}
 }
 
-func (c *controller) startWebhook() {
+func (c *controller) handleWebhook(w http.ResponseWriter, r *http.Request) {
+	payload, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Internal Error", http.StatusInternalServerError)
+		return
+	}
+
+	if r.Header.Get("X-GitHub-Event") != "" {
+		if r.Header.Get("X-GitHub-Event") != "push" {
+			http.Error(w, "Invalid webhook", http.StatusBadRequest)
+			return
+		}
+	}
+
+	data := gitPushEventData{}
+	if err = json.Unmarshal(payload, &data); err != nil {
+		http.Error(w, "Failed to parse webhook data", http.StatusBadRequest)
+		return
+	}
+
+	if c.cfg.Webhook.Secret != "" {
+		if r.Header.Get("X-Hub-Signature") != "" {
+			if calcSignature(&payload, c.cfg.Webhook.Secret) != r.Header.Get("X-Hub-Signature") {
+				http.Error(w, "Invalid secret", http.StatusBadRequest)
+				return
+			}
+		} else {
+			if data.Secret != c.cfg.Webhook.Secret {
+				http.Error(w, "Invalid secret", http.StatusBadRequest)
+				return
+			}
+		}
+	}
+
+	port := getPortFromMessage(data.Commits[0].Message)
+	if port == "" {
+		fmt.Fprint(w, "No category/port detected in commit message")
+		return
+	}
+
+	cnt := 0
+	for _, q := range c.getQueueInfoFromMessage(data.Commits[0].Message) {
+		job := worker{
+			ID:           newWorkerID(),
+			Status:       "pending",
+			Queue:        q,
+			Port:         port,
+			Commit:       data.CommitID,
+			RepoURL:      data.Repository.URL,
+			RepoName:     data.Repository.Name,
+			RepoFullName: data.Repository.FullName,
+		}
+
+		select {
+		case q.queue <- job:
+			cnt++
+			log.Printf("%s Port %s queued on %s (pos %d)\n", job.ID, job.Port, q.Name, len(q.queue))
+		default:
+			log.Printf("%s Queue limit reached on queue %s\n", job.ID, q.Name)
+		}
+	}
+	fmt.Fprintf(w, "%d Jobs queued", cnt)
+}
+
+func (c *controller) startHTTPD() {
 	defer c.wg.Done()
 
 	mux := http.NewServeMux()
@@ -235,70 +299,8 @@ func (c *controller) startWebhook() {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
 			fmt.Fprint(w, "nothing to see here")
-			return
 		} else {
-			payload, err := ioutil.ReadAll(r.Body)
-			if err != nil {
-				http.Error(w, "Internal Error", http.StatusInternalServerError)
-				return
-			}
-
-			if r.Header.Get("X-GitHub-Event") != "" {
-				if r.Header.Get("X-GitHub-Event") != "push" {
-					http.Error(w, "Invalid webhook", http.StatusBadRequest)
-					return
-				}
-			}
-
-			data := gitPushEventData{}
-			if err = json.Unmarshal(payload, &data); err != nil {
-				http.Error(w, "Failed to parse webhook data", http.StatusBadRequest)
-				return
-			}
-
-			if c.cfg.Webhook.Secret != "" {
-				if r.Header.Get("X-Hub-Signature") != "" {
-					if calcSignature(&payload, c.cfg.Webhook.Secret) != r.Header.Get("X-Hub-Signature") {
-						http.Error(w, "Invalid secret", http.StatusBadRequest)
-						return
-					}
-				} else {
-					if data.Secret != c.cfg.Webhook.Secret {
-						http.Error(w, "Invalid secret", http.StatusBadRequest)
-						return
-					}
-				}
-			}
-
-			port := getPortFromMessage(data.Commits[0].Message)
-
-			if port == "" {
-				fmt.Fprint(w, "No category/port detected in commit message")
-				return
-			}
-
-			cnt := 0
-			for _, q := range c.getQueueInfoFromMessage(data.Commits[0].Message) {
-				job := worker{
-					ID:           newWorkerID(),
-					Status:       "pending",
-					Queue:        q,
-					Port:         port,
-					Commit:       data.CommitID,
-					RepoURL:      data.Repository.URL,
-					RepoName:     data.Repository.Name,
-					RepoFullName: data.Repository.FullName,
-				}
-
-				select {
-				case q.queue <- job:
-					cnt++
-					log.Printf("%s Port %s queued on %s (pos %d)\n", job.ID, job.Port, q.Name, len(q.queue))
-				default:
-					log.Printf("%s Queue limit reached on queue %s\n", job.ID, q.Name)
-				}
-			}
-			fmt.Fprintf(w, "%d Jobs queued", cnt)
+			c.handleWebhook(w, r)
 		}
 	})
 
@@ -388,7 +390,7 @@ func main() {
 	}
 
 	wg.Add(1)
-	go ctrl.startWebhook()
+	go ctrl.startHTTPD()
 
 	wg.Wait()
 }

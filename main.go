@@ -24,34 +24,34 @@ import (
 )
 
 type controller struct {
-	wg     *sync.WaitGroup
-	cfg    *Config
+	wg  *sync.WaitGroup
+	cfg *Config
 }
 
 type Queue struct {
-	Name      string
-	Recipe    string
+	Name        string
+	Recipe      string
 	Environment map[string]string
-	queue     chan worker
+	queue       chan worker
 }
 
 type Config struct {
-	Workdir  string
-	Logdir   string
-	Server struct {
-		Host     string
-		BaseURL  string
-		TLScert  string
-		TLSkey   string
+	Workdir string
+	Logdir  string
+	Server  struct {
+		Host    string
+		BaseURL string
+		TLScert string
+		TLSkey  string
 	}
 	Webhook struct {
-		Secret   string
+		Secret string
 	}
 	Repository struct {
 		APIURL   string
 		APIToken string
 	}
-	Queues []Queue
+	Queues        []Queue
 	DefaultQueues []string `yaml:"default_queues"`
 }
 
@@ -119,7 +119,7 @@ func (c *controller) getQueueInfoFromMessage(msg string) []Queue {
 				return queues
 			}
 			if strings.Contains(line, "yes") || strings.Contains(line, "true") {
-				for i := range(c.cfg.Queues) {
+				for i := range c.cfg.Queues {
 					queues = append(queues, c.cfg.Queues[i])
 				}
 				return queues
@@ -127,7 +127,7 @@ func (c *controller) getQueueInfoFromMessage(msg string) []Queue {
 		}
 	}
 
-	for _, name := range(c.cfg.DefaultQueues) {
+	for _, name := range c.cfg.DefaultQueues {
 		q := c.getQueueByName(name)
 		if q.Name == "" {
 			continue
@@ -139,7 +139,7 @@ func (c *controller) getQueueInfoFromMessage(msg string) []Queue {
 }
 
 func (c *controller) getQueueByName(name string) Queue {
-	for i := range(c.cfg.Queues) {
+	for i := range c.cfg.Queues {
 		if c.cfg.Queues[i].Name == name {
 			return c.cfg.Queues[i]
 		}
@@ -159,9 +159,9 @@ func (c *controller) sendStatusUpdate(wrk worker) error {
 		c.cfg.Repository.APIURL, wrk.RepoFullName, wrk.Commit, c.cfg.Repository.APIToken)
 
 	jsonValue, _ := json.Marshal(map[string]string{
-		"state": wrk.Status,
+		"state":      wrk.Status,
 		"target_url": target,
-		"context": wrk.Queue.Name,
+		"context":    wrk.Queue.Name,
 	})
 
 	_, err := http.Post(url, "application/json", bytes.NewBuffer(jsonValue))
@@ -187,7 +187,7 @@ func (c *controller) startWorker(workChan chan worker) {
 				fmt.Sprintf("JOB_PORT=%s", wrk.Port),
 			)
 
-			for k, v := range(queue.Environment) {
+			for k, v := range queue.Environment {
 				env = append(env, fmt.Sprintf("%s=%s", k, v))
 			}
 
@@ -197,8 +197,8 @@ func (c *controller) startWorker(workChan chan worker) {
 			os.MkdirAll(workdir, os.ModePerm)
 
 			cmd := exec.Cmd{
-				Dir: workdir,
-				Env: env,
+				Dir:  workdir,
+				Env:  env,
 				Path: "/usr/bin/make",
 				Args: []string{
 					"make",
@@ -278,8 +278,8 @@ func (c *controller) startWebhook() {
 			}
 
 			cnt := 0
-			for _, q := range(c.getQueueInfoFromMessage(data.Commits[0].Message)) {
-				job := worker {
+			for _, q := range c.getQueueInfoFromMessage(data.Commits[0].Message) {
+				job := worker{
 					ID:           newWorkerID(),
 					Status:       "pending",
 					Queue:        q,
@@ -326,8 +326,8 @@ func (c *controller) startWebhook() {
 		err = srv.ListenAndServeTLS(c.cfg.Server.TLScert, c.cfg.Server.TLSkey)
 	} else {
 		srv := &http.Server{
-			Addr:         c.cfg.Server.Host,
-			Handler:      mux,
+			Addr:    c.cfg.Server.Host,
+			Handler: mux,
 		}
 
 		log.Printf("Listening on %s (http)\n", c.cfg.Server.Host)
@@ -372,17 +372,17 @@ func main() {
 
 	wg := sync.WaitGroup{}
 
-	for i := range(cfg.Queues) {
+	for i := range cfg.Queues {
 		log.Printf("Adding queue %s\n", cfg.Queues[i].Name)
 		cfg.Queues[i].queue = make(chan worker, 10)
 	}
 
 	ctrl := controller{
-		wg:     &wg,
-		cfg:    &cfg,
+		wg:  &wg,
+		cfg: &cfg,
 	}
 
-	for i := range(cfg.Queues) {
+	for i := range cfg.Queues {
 		wg.Add(1)
 		go ctrl.startWorker(cfg.Queues[i].queue)
 	}

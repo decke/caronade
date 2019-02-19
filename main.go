@@ -25,17 +25,17 @@ import (
 
 type controller struct {
 	wg  *sync.WaitGroup
-	cfg *Config
+	cfg *config
 }
 
-type Queue struct {
+type queue struct {
 	Name        string
 	Recipe      string
 	Environment map[string]string
 	queue       chan worker
 }
 
-type Config struct {
+type config struct {
 	Workdir string
 	Logdir  string
 	Server  struct {
@@ -51,14 +51,14 @@ type Config struct {
 		APIURL   string
 		APIToken string
 	}
-	Queues        []Queue
+	Queues        []queue
 	DefaultQueues []string `yaml:"default_queues"`
 }
 
 type worker struct {
 	ID           string
 	Status       string
-	Queue        Queue
+	Queue        queue
 	Port         string
 	Commit       string
 	RepoURL      string
@@ -108,8 +108,8 @@ func getPortFromMessage(msg string) string {
 	return ""
 }
 
-func (c *controller) getQueueInfoFromMessage(msg string) []Queue {
-	queues := make([]Queue, 0)
+func (c *controller) getQueueInfoFromMessage(msg string) []queue {
+	queues := make([]queue, 0)
 	lines := strings.Split(msg, "\n")
 
 	for _, line := range lines {
@@ -138,14 +138,14 @@ func (c *controller) getQueueInfoFromMessage(msg string) []Queue {
 	return queues
 }
 
-func (c *controller) getQueueByName(name string) Queue {
+func (c *controller) getQueueByName(name string) queue {
 	for i := range c.cfg.Queues {
 		if c.cfg.Queues[i].Name == name {
 			return c.cfg.Queues[i]
 		}
 	}
 
-	return Queue{}
+	return queue{}
 }
 
 func (c *controller) sendStatusUpdate(wrk worker) error {
@@ -339,7 +339,7 @@ func (c *controller) startWebhook() {
 	}
 }
 
-func ParseConfig(file string) Config {
+func parseConfig(file string) config {
 	f, err := os.Open(file)
 	if err != nil {
 		log.Fatalf("Error: %v", err)
@@ -348,7 +348,7 @@ func ParseConfig(file string) Config {
 
 	dec := yaml.NewDecoder(f)
 
-	cfg := Config{}
+	cfg := config{}
 	err = dec.Decode(&cfg)
 	if err != nil {
 		log.Fatalf("Error: %v", err)
@@ -368,7 +368,7 @@ func main() {
 	flag.StringVar(&cfgfile, "config", "caronade.yaml", "Path to config file")
 	flag.Parse()
 
-	cfg := ParseConfig(cfgfile)
+	cfg := parseConfig(cfgfile)
 
 	wg := sync.WaitGroup{}
 

@@ -151,7 +151,7 @@ func (c *controller) getQueueInfoFromMessage(msg string) []queue {
 }
 
 func (j *job) StartDate() string {
-	return j.Startdate.Format(time.RFC822)
+	return j.Startdate.Format(time.RFC850)
 }
 
 func (b *build) LogfileContent() string {

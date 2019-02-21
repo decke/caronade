@@ -58,7 +58,7 @@ type queue struct {
 	Recipe      string
 	Environment map[string]string
 	Workdir     string
-	queue       chan job
+	queue       chan *job
 }
 
 type job struct {
@@ -81,7 +81,6 @@ type build struct {
 	Startdate time.Time
 	Enddate   time.Time
 }
-
 
 type gitPushEventData struct {
 	Secret     string `json:"secret"`
@@ -151,7 +150,20 @@ func (c *controller) getQueueInfoFromMessage(msg string) []queue {
 	return queues
 }
 
-func (c *controller) renderBuildTemplate(j job) {
+func (j *job) StartDate() string {
+	return j.Startdate.Format(time.RFC822)
+}
+
+func (b *build) LogfileContent() string {
+	raw, err := ioutil.ReadFile(b.Logfile)
+	if err != nil {
+		return fmt.Sprintf("Logfile %s not found!", b.Logfile)
+	}
+
+	return string(raw)
+}
+
+func (c *controller) renderBuildTemplate(j *job) {
 	fs, _ := fs.New()
 	infile, err := fs.Open("/templates/index.html")
 	if err != nil {
@@ -161,7 +173,7 @@ func (c *controller) renderBuildTemplate(j job) {
 
 	raw, _ := ioutil.ReadAll(infile)
 
-	tmpl, err := template.New("index").Parse(string(raw))
+	tmpl, err := template.New("index.html").Parse(string(raw))
 	if err != nil {
 		log.Printf("Failed parsing template: %v", err)
 		return
@@ -171,7 +183,7 @@ func (c *controller) renderBuildTemplate(j job) {
 	defer outfile.Close()
 
 	writer := bufio.NewWriter(outfile)
-	err = tmpl.Execute(writer, j)
+	err = tmpl.Execute(writer, &j)
 	if err != nil {
 		log.Printf("Failed executing template: %v", err)
 		return
@@ -180,7 +192,7 @@ func (c *controller) renderBuildTemplate(j job) {
 	outfile.Sync()
 }
 
-func (c *controller) sendStatusUpdate(j job, b build) error {
+func (c *controller) sendStatusUpdate(j *job, b *build) error {
 	target := ""
 
 	if b.Status != "pending" {
@@ -201,13 +213,14 @@ func (c *controller) sendStatusUpdate(j job, b build) error {
 	return err
 }
 
-func (c *controller) startWorker(q queue) {
+func (c *controller) startWorker(q *queue) {
 	defer c.wg.Done()
 
 	for {
+		var j *job
 		select {
-		case j := <-q.queue:
-			b := *j.Build[q.Name]
+		case j = <-q.queue:
+			b := j.Build[q.Name]
 			b.Startdate = time.Now()
 
 			log.Printf("ID %s started on %s\n", j.ID, q.Name)
@@ -321,7 +334,7 @@ func (c *controller) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		job.Build[q.Name] = &b
 
 		select {
-		case q.queue <- job:
+		case q.queue <- &job:
 			cnt++
 			log.Printf("ID %s Port %s queued on %s (pos %d)\n", job.ID, job.Port, q.Name, len(q.queue))
 		default:
@@ -428,11 +441,11 @@ func main() {
 	for i := range cfg.Queues {
 		log.Printf("Adding queue %s\n", cfg.Queues[i].Name)
 		cfg.Queues[i].Workdir = path.Join(cfg.Workdir, reg.ReplaceAllString(cfg.Queues[i].Name, ""))
-		cfg.Queues[i].queue = make(chan job, 10)
+		cfg.Queues[i].queue = make(chan *job, 10)
 		ctrl.queues[cfg.Queues[i].Name] = &cfg.Queues[i]
 
 		wg.Add(1)
-		go ctrl.startWorker(cfg.Queues[i])
+		go ctrl.startWorker(&cfg.Queues[i])
 	}
 
 	wg.Add(1)

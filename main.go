@@ -28,15 +28,9 @@ import (
 )
 
 type controller struct {
-	wg  *sync.WaitGroup
-	cfg *config
-}
-
-type queue struct {
-	Name        string
-	Recipe      string
-	Environment map[string]string
-	queue       chan job
+	wg     *sync.WaitGroup
+	cfg    *config
+	queues map[string]*queue
 }
 
 type config struct {
@@ -59,6 +53,14 @@ type config struct {
 	DefaultQueues []string `yaml:"default_queues"`
 }
 
+type queue struct {
+	Name        string
+	Recipe      string
+	Environment map[string]string
+	Workdir     string
+	queue       chan job
+}
+
 type job struct {
 	ID           string
 	Port         string
@@ -68,14 +70,14 @@ type job struct {
 	RepoFullName string
 	Startdate    time.Time
 	Enddate      time.Time
-	Build[]      Build
+	Build        map[string]*build
 }
 
-type Build struct {
+type build struct {
+	ID        string
 	Queue     string
 	Status    string
 	Logfile   string
-	Workdir   string
 	Startdate time.Time
 	Enddate   time.Time
 }
@@ -99,10 +101,6 @@ func calcSignature(payload *[]byte, secret string) string {
 	mac.Write(*payload)
 
 	return fmt.Sprintf("sha1=%x", mac.Sum(nil))
-}
-
-func newJobID() string {
-	return time.Now().Format("20060102150405.000000")
 }
 
 func getPortFromMessage(msg string) string {
@@ -143,34 +141,14 @@ func (c *controller) getQueueInfoFromMessage(msg string) []queue {
 	}
 
 	for _, name := range c.cfg.DefaultQueues {
-		q := c.getQueueByName(name)
-		if q.Name == "" {
+		q, ok := c.queues[name]
+		if !ok {
 			continue
 		}
-		queues = append(queues, q)
+		queues = append(queues, *q)
 	}
 
 	return queues
-}
-
-func (c *controller) getQueueByName(name string) queue {
-	for i := range c.cfg.Queues {
-		if c.cfg.Queues[i].Name == name {
-			return c.cfg.Queues[i]
-		}
-	}
-
-	return queue{}
-}
-
-func (c *controller) getBuildFromJob(j job, queue string) Build {
-	for i := range j.Build {
-		if j.Build[i].Queue == queue {
-			return j.Build[i]
-		}
-	}
-
-	return Build{}
 }
 
 func (c *controller) renderBuildTemplate(j job) {
@@ -202,7 +180,7 @@ func (c *controller) renderBuildTemplate(j job) {
 	outfile.Sync()
 }
 
-func (c *controller) sendStatusUpdate(j job, b Build) error {
+func (c *controller) sendStatusUpdate(j job, b build) error {
 	target := ""
 
 	if b.Status != "pending" {
@@ -229,15 +207,8 @@ func (c *controller) startWorker(q queue) {
 	for {
 		select {
 		case j := <-q.queue:
-			b := c.getBuildFromJob(j, q.Name)
+			b := *j.Build[q.Name]
 			b.Startdate = time.Now()
-			b.Workdir = strings.Replace(q.Name, "/", "", -1)
-			b.Workdir = strings.Replace(b.Workdir, " ", "", -1)
-			b.Workdir = path.Join(c.cfg.Workdir, b.Workdir)
-
-			b.Logfile = strings.Replace(q.Name+".log", "/", "", -1)
-			b.Logfile = strings.Replace(b.Logfile, " ", "", -1)
-			b.Logfile = path.Join(c.cfg.Logdir, j.ID, b.Logfile)
 
 			log.Printf("ID %s started on %s\n", j.ID, q.Name)
 			c.sendStatusUpdate(j, b)
@@ -253,15 +224,15 @@ func (c *controller) startWorker(q queue) {
 				env = append(env, fmt.Sprintf("%s=%s", k, v))
 			}
 
-			os.MkdirAll(b.Workdir, os.ModePerm)
+			os.MkdirAll(q.Workdir, os.ModePerm)
 
 			cmd := exec.Cmd{
-				Dir:  b.Workdir,
+				Dir:  q.Workdir,
 				Env:  env,
 				Path: "/usr/bin/make",
 				Args: []string{
 					"make",
-					"-C", b.Workdir,
+					"-C", q.Workdir,
 					"-f", fmt.Sprintf("%s.mk", q.Recipe),
 					"-I", c.cfg.Workdir,
 					"all",
@@ -276,6 +247,7 @@ func (c *controller) startWorker(q queue) {
 			b.Enddate = time.Now()
 			j.Enddate = time.Now()
 
+			b.Logfile = path.Join(c.cfg.Logdir, j.ID, b.ID + ".log")
 			os.MkdirAll(filepath.Dir(b.Logfile), os.ModePerm)
 			ioutil.WriteFile(b.Logfile, output, 0600)
 
@@ -329,28 +301,24 @@ func (c *controller) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	job := job{
-		ID:           newJobID(),
+		ID:           time.Now().Format("20060102150405.000"),
 		Port:         port,
 		Commit:       data.CommitID,
 		RepoURL:      data.Repository.URL,
 		RepoName:     data.Repository.Name,
 		RepoFullName: data.Repository.FullName,
 		Startdate:    time.Now(),
-		Build:        make([]Build, 0),
-	}
-
-	for _, q := range c.getQueueInfoFromMessage(data.Commits[0].Message) {
-		build := Build{
-			Queue:  q.Name,
-			Status: "pending",
-		}
-
-		job.Build = append(job.Build, build)
+		Build:        make(map[string]*build),
 	}
 
 	cnt := 0
-	for i := range job.Build {
-		q := c.getQueueByName(job.Build[i].Queue)
+	for _, q := range c.getQueueInfoFromMessage(data.Commits[0].Message) {
+		b := build{
+			ID:     fmt.Sprintf("%03d", cnt+1),
+			Queue:  q.Name,
+			Status: "pending",
+		}
+		job.Build[q.Name] = &b
 
 		select {
 		case q.queue <- job:
@@ -448,20 +416,21 @@ func main() {
 	flag.Parse()
 
 	cfg := parseConfig(cfgfile)
-
 	wg := sync.WaitGroup{}
 
+	ctrl := controller{
+		wg:     &wg,
+		cfg:    &cfg,
+		queues: make(map[string]*queue),
+	}
+
+	reg := regexp.MustCompile("[^a-zA-Z0-9]+")
 	for i := range cfg.Queues {
 		log.Printf("Adding queue %s\n", cfg.Queues[i].Name)
+		cfg.Queues[i].Workdir = path.Join(cfg.Workdir, reg.ReplaceAllString(cfg.Queues[i].Name, ""))
 		cfg.Queues[i].queue = make(chan job, 10)
-	}
+		ctrl.queues[cfg.Queues[i].Name] = &cfg.Queues[i]
 
-	ctrl := controller{
-		wg:  &wg,
-		cfg: &cfg,
-	}
-
-	for i := range cfg.Queues {
 		wg.Add(1)
 		go ctrl.startWorker(cfg.Queues[i])
 	}

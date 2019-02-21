@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta name="author" content="Bernhard Froehlich">
+		<meta name="description" content="FreeBSD Ports CI">
+		<title>Caronade - FreeBSD PortsCI</title>
+		<link rel="stylesheet" href="../../assets/normalize.min.css">
+		<link rel="stylesheet" href="../../assets/milligram.min.css">
+		<link rel="stylesheet" href="../../assets/main.css">
+	</head>
+	<body>
+
+		<main class="wrapper">
+
+			<nav class="navigation">
+				<section class="container">
+					<a class="navigation-title" href="https://code.bluelife.at/decke/caronade/">
+						<h1 class="title">Caronade - FreeBSD Ports CI</h1>
+					</a>
+				</section>
+			</nav>
+
+			<section class="container" id="job">
+				<h3 class="title">Build Job #{{.ID}}</h3>
+
+				<div class="container">
+					<div class="row">
+						<div class="column column-25"><b>Job ID #</b></div>
+						<div class="column column-75">{{.ID}}</div>
+					</div>
+					<div class="row">
+						<div class="column column-25"><b>Commit</b></div>
+						<div class="column column-75">{{.Commit}}</div>
+					</div>
+					<div class="row">
+						<div class="column column-25"><b>Repository</b></div>
+						<div class="column column-75"><a href="{{.RepoURL}}">{{.RepoURL}}</a></div>
+					</div>
+					<div class="row">
+						<div class="column column-25"><b>Port</b></div>
+						<div class="column column-75">{{.Port}}</div>
+					</div>
+					<div class="row">
+						<div class="column column-25"><b>Build date</b></div>
+						<div class="column column-75">{{.StartDate}}</div>
+					</div>
+				</div>
+			</section>
+
+			<section class="container" id="builds">
+				<table>
+					<thead>
+						<tr>
+							<th>Build</th>
+							<th>Status</th>
+							<th>Logfile</th>
+						</tr>
+					</thead>
+					<tbody>
+						{{range .Build}}
+						<tr>
+							<td>{{.Queue}}</td>
+							<td><button class="button button-{{.Status}}">{{.Status}}</button></td>
+							<td>
+								<a class="button button-outline" href="#log-{{.ID}}">view log</a>
+								<a class="button button-outline" href="{{.ID}}.log">download</a>
+							</td>
+						</tr>
+						{{end}}
+					</tbody>
+				</table>
+			</section>
+
+			{{range .Build}}
+			<section class="container" id="log-{{.ID}}">
+				<h3>{{.Queue}}</h3>
+				<pre><code>
+{{.LogfileContent}}
+				</code></pre>
+			</section>
+			{{end}}
+
+		</main>
+
+	</body>
+</html>

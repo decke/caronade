@@ -157,7 +157,7 @@ func (j *job) StartDate() string {
 func (b *build) LogfileContent() string {
 	raw, err := ioutil.ReadFile(b.Logfile)
 	if err != nil {
-		return fmt.Sprintf("Logfile %s not found!", b.Logfile)
+		return ""
 	}
 
 	return string(raw)

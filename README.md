@@ -1,5 +1,7 @@
 # caronade
 
+[![Go Report Card](https://goreportcard.com/badge/code.bluelife.at/decke/caronade)](https://goreportcard.com/report/code.bluelife.at/decke/caronade)
+
 A small and light tool to help with FreeBSD Ports CI (Continuous Integration).
 
 Whenever you push some code to your Git repository caronade will

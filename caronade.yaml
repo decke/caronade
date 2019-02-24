@@ -1,6 +1,8 @@
 # caronade config
 workdir: work
 logdir: builds
+staticdir: static
+tmpldir: templates
 
 server:
   host: 127.0.0.1:3000

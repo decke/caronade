@@ -35,16 +35,7 @@ REPODIR?=	${WORKDIR}/repo.git
 .error "JOB_PORT variable is not set!"
 .endif
 
-all: start checkout build clean
-
-start:
-	@printf "===========================================================================\n"
-	@printf "JOB#:\t%s\n" ${JOB_ID}
-	@printf "COMMIT:\t%s\n" ${COMMIT_ID}
-	@printf "REPO:\t%s\n" ${REPO_URL}
-	@printf "PORT:\t%s\n" ${JOB_PORT}
-	@printf "DATE:\t%s\n" "`date`"
-	@printf "===========================================================================\n"
+all: checkout build clean
 
 checkout: clean
 	git clone ${REPO_URL} ${REPODIR}
@@ -57,4 +48,4 @@ build:
 clean:
 	rm -rf ${REPODIR}
 
-.PHONY: all start checkout build clean
+.PHONY: all checkout build clean

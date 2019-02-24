@@ -57,24 +57,13 @@ PORTSPATH!=	zfs get -H mountpoint ${ZPORTSFS} | cut -f3
 .endif
 
 
-all: start checkout prepare build clean finish
-
-start:
-	@printf "===========================================================================\n"
-	@printf "JOB#:\t%s\n" ${JOB_ID}
-	@printf "COMMIT:\t%s\n" ${COMMIT_ID}
-	@printf "REPO:\t%s\n" ${REPO_URL}
-	@printf "PORT:\t%s\n" ${JOB_PORT}
-	@printf "===========================================================================\n"
-	@printf "Start at %s\n" "`date`"
+all: checkout prepare build clean
 
 checkout: clean
-	@printf "= C H E C K O U T =========================================================\n"
 	git clone ${REPO_URL} ${REPODIR}
 	git -C "${REPODIR}" -c advice.detachedHead=false checkout ${COMMIT_ID}
 
 prepare:
-	@printf "= P R E P A R E ===========================================================\n"
 	poudriere ports -u ${PORTSTREE}
 	zfs snapshot ${ZPORTSFS}@clean
 
@@ -83,16 +72,11 @@ prepare:
 	cp -pr ${REPODIR}/${JOB_PORT} ${PORTSPATH}/${JOB_PORT}
 
 build:
-	@printf "= B U I L D ===============================================================\n"
 	poudriere testport -j ${JAIL_NAME} -p ${PORTSTREE} ${JOB_PORT}
 
 clean:
-	@printf "= C L E A N ===============================================================\n"
 	rm -rf ${REPODIR}
 	@zfs rollback ${ZPORTSFS}@clean || true
 	@zfs destroy ${ZPORTSFS}@clean || true
 
-finish:
-	@echo Finish at `date`
-
-.PHONY: all start checkout prepare build clean finish
+.PHONY: all checkout prepare build clean

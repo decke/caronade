@@ -64,10 +64,13 @@ type queue struct {
 type job struct {
 	ID           string
 	Port         string
-	Commit       string
-	RepoURL      string
+	CommitID     string
+	CommitMsg    string
+	CommitURL    string
 	RepoName     string
 	RepoFullName string
+	RepoHTMLURL  string
+	RepoCloneURL string
 	Startdate    time.Time
 	Enddate      time.Time
 	Build        map[string]*build
@@ -88,10 +91,12 @@ type gitPushEventData struct {
 	Repository struct {
 		Name     string `json:"name"`
 		FullName string `json:"full_name"`
-		URL      string `json:"clone_url"`
+		HTMLURL  string `json:"html_url"`
+		CloneURL string `json:"clone_url"`
 	} `json:"repository"`
 	Commits []struct {
 		Message string `json:"message"`
+		URL     string `json:"url"`
 	} `json:"commits"`
 }
 
@@ -200,7 +205,7 @@ func (c *controller) sendStatusUpdate(j *job, b *build) error {
 	}
 
 	url := fmt.Sprintf("%s/repos/%s/statuses/%s?access_token=%s",
-		c.cfg.Repository.APIURL, j.RepoFullName, j.Commit, c.cfg.Repository.APIToken)
+		c.cfg.Repository.APIURL, j.RepoFullName, j.CommitID, c.cfg.Repository.APIToken)
 
 	jsonValue, _ := json.Marshal(map[string]string{
 		"state":      b.Status,
@@ -228,8 +233,8 @@ func (c *controller) startWorker(q *queue) {
 
 			env := append(os.Environ(),
 				fmt.Sprintf("JOB_ID=%s", j.ID),
-				fmt.Sprintf("COMMIT_ID=%s", j.Commit),
-				fmt.Sprintf("REPO_URL=%s", j.RepoURL),
+				fmt.Sprintf("COMMIT_ID=%s", j.CommitID),
+				fmt.Sprintf("REPO_URL=%s", j.RepoCloneURL),
 				fmt.Sprintf("JOB_PORT=%s", j.Port),
 			)
 
@@ -316,10 +321,13 @@ func (c *controller) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	job := job{
 		ID:           time.Now().Format("20060102150405.000"),
 		Port:         port,
-		Commit:       data.CommitID,
-		RepoURL:      data.Repository.URL,
+		CommitID:     data.CommitID,
+		CommitMsg:    data.Commits[0].Message,
+		CommitURL:    data.Commits[0].URL,
 		RepoName:     data.Repository.Name,
 		RepoFullName: data.Repository.FullName,
+		RepoHTMLURL:  data.Repository.HTMLURL,
+		RepoCloneURL: data.Repository.CloneURL,
 		Startdate:    time.Now(),
 		Build:        make(map[string]*build),
 	}

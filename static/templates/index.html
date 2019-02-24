@@ -32,20 +32,24 @@
 						<div class="column column-75">{{.ID}}</div>
 					</div>
 					<div class="row">
+						<div class="column column-25"><b>Build date</b></div>
+						<div class="column column-75">{{.StartDate}}</div>
+					</div>
+					<div class="row">
 						<div class="column column-25"><b>Commit</b></div>
-						<div class="column column-75">{{.Commit}}</div>
+						<div class="column column-75"><a href="{{.CommitURL}}">{{.Commit}}</a></div>
 					</div>
 					<div class="row">
 						<div class="column column-25"><b>Repository</b></div>
-						<div class="column column-75"><a href="{{.RepoURL}}">{{.RepoURL}}</a></div>
+						<div class="column column-75"><a href="{{.RepoHTMLURL}}">{{.RepoHTMLURL}}</a></div>
 					</div>
 					<div class="row">
 						<div class="column column-25"><b>Port</b></div>
-						<div class="column column-75">{{.Port}}</div>
+						<div class="column column-75"><a href="https://www.freshports.org/{{.Port}}/">{{.Port}}</a></div>
 					</div>
 					<div class="row">
-						<div class="column column-25"><b>Build date</b></div>
-						<div class="column column-75">{{.StartDate}}</div>
+						<div class="column column-100"><b>Message</b></div>
+						<div class="column column-75"><blockquote>{{.CommitMsg}}</blockquote></div>
 					</div>
 				</div>
 			</section>

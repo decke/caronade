@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/NYTimes/gziphandler"
 	"gopkg.in/yaml.v2"
 )
 
@@ -348,9 +349,11 @@ func (c *controller) startHTTPD() {
 
 	mux := http.NewServeMux()
 
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(c.cfg.Staticdir))))
+	staticHandlerGz := gziphandler.GzipHandler(http.StripPrefix("/static/", http.FileServer(http.Dir(c.cfg.Staticdir))))
+	mux.Handle("/static/", staticHandlerGz)
 
-	mux.Handle("/builds/", http.StripPrefix("/builds/", http.FileServer(http.Dir(c.cfg.Logdir))))
+	buildHandlerGz := gziphandler.GzipHandler(http.StripPrefix("/builds/", http.FileServer(http.Dir(c.cfg.Logdir))))
+	mux.Handle("/builds/", buildHandlerGz)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {

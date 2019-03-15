@@ -4,31 +4,68 @@
 
 A small and light tool to help with FreeBSD Ports CI (Continuous Integration).
 
-Whenever you push some code to your Git repository caronade will
-receive a webhook and create build jobs for the affected ports.
-Those jobs will call a Makefile which creates poudriere testport
-build jobs and the result will be reported back to your repository
-via the GitHub Status API.
+Caronade will automatically create build jobs using poudriere and
+portlint whenever you push changes to your Git based ports repository.
 
 
 ## Main features
 
-* Simple to setup and maintain (really!)
-* Webhook support ([GitHub](https://github.com/) and [Gitea](https://gitea.io/))
-* Using Makefile worker for building (easy to customize!)
-* Poudriere support for building
-* Portlint support for checking port files
-* Supports GitHub/Gitea integration (Status API)
-* Webserver for logfiles with HTTPS support
+* Simple to setup and maintain
+* ([GitHub](https://github.com/) and [Gitea](https://gitea.io/)) integration (Webhooks, Status API)
+* [Poudriere](https://github.com/freebsd/poudriere/wiki) support for building
+* Portlint support to verify port files
+* Webserver for logfiles with HTTP/HTTPS support
 
 
-## Requirements
+## Getting Started
+
+### Requirements
 
 * git repository (GitHub or Gitea) with your ports
 * [poudriere](https://github.com/freebsd/poudriere) on ZFS
+* caronade needs to be reachable from the Internet
+
+### Installation
+
+There is a FreeBSD port available as `ports-mgmt/caronade`.
+
+`pkg install caronade`
+
+### Configuration
+
+Edit `/usr/local/etc/caronade/caronade.yaml` as needed.
+
+### GitHub Setup
+
+Create a new repository which only contains your ports (avoid forking the full FreeBSD
+portstree) on GitHub.
+
+A webhook needs to be created which does a HTTP POST request to your caronade
+daemon.
+
+Create the webhook from the repository webinterface
+`
+github: repository settings -> webhooks -> add webhook
+  payload url: baseurl from caronade
+  content type: application/json
+  secret: same as below
+  events: Just the push event
+`
+
+Test the webhook by pushing a commit to the repository.
+
+### Usage
+
+Caronade parses the commit message and expects all commit messages to start
+with `category/portname` which it will use to generate build jobs. If the
+commit message contains a line `CI: yes|no` build jobs will be generated for
+all or no queues. Per default if no such line is found build jobs are
+generated for all queues specified in `default_queues` in `caronade.yaml`.
 
 
-## Why caronade?
+## FAQ
+
+### Why caronade?
 
 [FreeBSD Ports](https://www.freebsd.org/doc/en/books/porters-handbook/) are a great
 and huge collection of 3rd party sofware. For people working with ports it is very
@@ -38,7 +75,7 @@ fine in many different combinations (FreeBSD versions, architectures, Port optio
 Caronade does the testing for you while you continue with your work.
 
 
-## Is this redports?
+### Is this redports?
 
 Redports was an attempt to run a fully hosted FreeBSD Ports building
 service for everyone. Sadly it was also very complex, hard to maintain

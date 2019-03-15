@@ -60,7 +60,7 @@ If you want caronade to integrate into the GitHub Webinterface for your
 repository then you need to create an GitHub API Token for that.
 
 ```
-user settings -> developer settings -> personal access tokens -> repo:status
+github: user settings -> developer settings -> personal access tokens -> repo:status
 ```
 
 The token and API URL needs to be set in `caronade.yaml`.

@@ -11,7 +11,7 @@ portlint whenever you push changes to your Git based ports repository.
 ## Main features
 
 * Simple to setup and maintain
-* ([GitHub](https://github.com/) and [Gitea](https://gitea.io/)) integration (Webhooks, Status API)
+* [GitHub](https://github.com/) and [Gitea](https://gitea.io/) integration (Webhooks, Status API)
 * [Poudriere](https://github.com/freebsd/poudriere/wiki) support for building
 * Portlint support to verify port files
 * Webserver for logfiles with HTTP/HTTPS support
@@ -35,24 +35,35 @@ There is a FreeBSD port available as `ports-mgmt/caronade`.
 
 Edit `/usr/local/etc/caronade/caronade.yaml` as needed.
 
-### GitHub Setup
+### GitHub Setup: Webhook
 
-Create a new repository which only contains your ports (avoid forking the full FreeBSD
-portstree) on GitHub.
+Create a new repository which only contains your ports (avoid forking the
+full FreeBSD portstree) on GitHub.
 
 A webhook needs to be created which does a HTTP POST request to your caronade
 daemon.
 
 Create the webhook from the repository webinterface
-`
+```
 github: repository settings -> webhooks -> add webhook
   payload url: baseurl from caronade
   content type: application/json
   secret: same as below
   events: Just the push event
-`
+```
 
 Test the webhook by pushing a commit to the repository.
+
+### GitHub Setup: Status API (optional)
+
+If you want caronade to integrate into the GitHub Webinterface for your
+repository then you need to create an GitHub API Token for that.
+
+```
+user settings -> developer settings -> personal access tokens -> repo:status
+```
+
+The token and API URL needs to be set in `caronade.yaml`.
 
 ### Usage
 

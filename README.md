@@ -19,6 +19,12 @@ portlint whenever you push changes to your Git based ports repository.
 
 ## Getting Started
 
+Caronade has an embedded HTTP(S) server which can receive Webhooks and
+shows your build status and build logs. It will execute a Makefile which
+runs the poudriere build so it expects that you have poudriere running
+successfully on the same machine. Each poudriere jail needs to have his
+own portstree to be able to run jobs in parallel.
+
 ### Requirements
 
 * git repository (GitHub or Gitea) with your ports

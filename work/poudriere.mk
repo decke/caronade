@@ -43,6 +43,8 @@ ZROOTFS?=	/poudriere
 ZPORTSFS?=	${ZPOOL}${ZROOTFS}/ports/${PORTSTREE}
 PORTSPATH!=	zfs get -H mountpoint ${ZPORTSFS} | cut -f3
 
+REPODIRS!=	(cd ${REPODIR} && find * \! -path "Mk/*" -type d -depth +0 -maxdepth 1)
+
 
 .if empty(REPO_URL)
 .error "REPO_URL variable is not set!"
@@ -67,9 +69,11 @@ prepare:
 	poudriere ports -u ${PORTSTREE}
 	zfs snapshot ${ZPORTSFS}@clean
 
-	# TODO - full overlay!
-	rm -rf ${PORTSPATH}/${JOB_PORT}
-	cp -pr ${REPODIR}/${JOB_PORT} ${PORTSPATH}/${JOB_PORT}
+.for p in ${REPODIRS}
+	@echo overlay for ${p}
+	@rm -rf ${PORTSPATH}/${p}
+	@cp -pr ${REPODIR}/${p} ${PORTSPATH}/${p}
+.endfor
 
 build:
 	poudriere testport -j ${JAIL_NAME} -p ${PORTSTREE} ${JOB_PORT}

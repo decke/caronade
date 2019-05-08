@@ -1,0 +1,9 @@
+kind: pipeline
+name: default
+
+steps:
+- name: backend
+  image: golang:1.12
+  commands:
+  - go build
+  - go test -v

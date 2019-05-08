@@ -1,6 +1,10 @@
 kind: pipeline
 name: default
 
+platform:
+  os: linux
+  arch: amd64
+
 steps:
 - name: backend
   image: golang:1.12

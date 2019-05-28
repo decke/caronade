@@ -177,18 +177,22 @@ func (c *controller) sendStatusUpdate(j *job, b *build) error {
 		target = fmt.Sprintf("%s/builds/%s/", c.cfg.Server.BaseURL, j.ID)
 	}
 
-	url := fmt.Sprintf("%s/repos/%s/statuses/%s?access_token=%s",
-		c.cfg.Repository.APIURL, j.PushEvent.Repository.FullName, j.PushEvent.CommitID, c.cfg.Repository.APIToken)
+	if c.cfg.Repository.APIURL != "" {
+		url := fmt.Sprintf("%s/repos/%s/statuses/%s?access_token=%s",
+			c.cfg.Repository.APIURL, j.PushEvent.Repository.FullName, j.PushEvent.CommitID, c.cfg.Repository.APIToken)
 
-	jsonValue, _ := json.Marshal(map[string]string{
-		"state":      b.Status,
-		"target_url": target,
-		"context":    b.Queue,
-	})
+		jsonValue, _ := json.Marshal(map[string]string{
+			"state":      b.Status,
+			"target_url": target,
+			"context":    b.Queue,
+		})
 
-	_, err := http.Post(url, "application/json", bytes.NewBuffer(jsonValue))
+		_, err := http.Post(url, "application/json", bytes.NewBuffer(jsonValue))
 
-	return err
+		return err
+	}
+
+	return nil
 }
 
 func (c *controller) startWorker(q *queue) {

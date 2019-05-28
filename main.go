@@ -98,6 +98,14 @@ type gitPushEventData struct {
 	Commits []struct {
 		Message string `json:"message"`
 		URL     string `json:"url"`
+		Author  struct {
+			Name     string `json:"name"`
+			EMail    string `json:"email"`
+			Username string `json:"username"`
+		} `json:"author"`
+		Added    []struct{} `json:"added"`
+		Removed  []struct{} `json:"removed"`
+		Modified []struct{} `json:"modified"`
 	} `json:"commits"`
 }
 

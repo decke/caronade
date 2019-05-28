@@ -64,11 +64,11 @@ type queue struct {
 }
 
 type job struct {
-	ID           string
-	Startdate    time.Time
-	Enddate      time.Time
-	Build        map[string]*build
-	PushEvent    gitPushEventData
+	ID        string
+	Startdate time.Time
+	Enddate   time.Time
+	Build     map[string]*build
+	PushEvent gitPushEventData
 }
 
 type build struct {
@@ -113,7 +113,7 @@ func calcSignature(payload *[]byte, secret string) string {
 func (c *controller) matchQueues(data gitPushEventData) []queue {
 	queues := make([]queue, 0)
 
-	NEXTQUEUE:
+NEXTQUEUE:
 	for i := range c.cfg.Queues {
 		re := regexp.MustCompile(c.cfg.Queues[i].PathMatch)
 
@@ -285,10 +285,10 @@ func (c *controller) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	job := job{
-		ID:           time.Now().Format("20060102150405.000"),
-		Startdate:    time.Now(),
-		Build:        make(map[string]*build),
-		PushEvent:    data,
+		ID:        time.Now().Format("20060102150405.000"),
+		Startdate: time.Now(),
+		Build:     make(map[string]*build),
+		PushEvent: data,
 	}
 
 	cnt := 0

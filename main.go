@@ -59,22 +59,16 @@ type queue struct {
 	Recipe      string
 	Environment map[string]string
 	Workdir     string
+	PathMatch   string
 	queue       chan *job
 }
 
 type job struct {
 	ID           string
-	Port         string
-	CommitID     string
-	CommitMsg    string
-	CommitURL    string
-	RepoName     string
-	RepoFullName string
-	RepoHTMLURL  string
-	RepoCloneURL string
 	Startdate    time.Time
 	Enddate      time.Time
 	Build        map[string]*build
+	PushEvent    gitPushEventData
 }
 
 type build struct {
@@ -103,9 +97,9 @@ type gitPushEventData struct {
 			EMail    string `json:"email"`
 			Username string `json:"username"`
 		} `json:"author"`
-		Added    []struct{} `json:"added"`
-		Removed  []struct{} `json:"removed"`
-		Modified []struct{} `json:"modified"`
+		Added    []string `json:"added"`
+		Removed  []string `json:"removed"`
+		Modified []string `json:"modified"`
 	} `json:"commits"`
 }
 
@@ -116,49 +110,28 @@ func calcSignature(payload *[]byte, secret string) string {
 	return fmt.Sprintf("sha1=%x", mac.Sum(nil))
 }
 
-func getPortFromMessage(msg string) string {
-	lines := strings.Split(msg, "\n")
-
-	if len(lines) < 1 || strings.IndexByte(lines[0], ':') < 1 {
-		return ""
-	}
-
-	re := regexp.MustCompile(`^([a-z0-9-]+)/([a-zA-Z0-9-_.]+)$`)
-
-	port := strings.TrimSpace(lines[0][:strings.IndexByte(lines[0], ':')])
-
-	if re.MatchString(port) {
-		return port
-	}
-
-	return ""
-}
-
-func (c *controller) getQueueInfoFromMessage(msg string) []queue {
+func (c *controller) matchQueues(data gitPushEventData) []queue {
 	queues := make([]queue, 0)
-	lines := strings.Split(msg, "\n")
 
-	for _, line := range lines {
-		line = strings.ToLower(line)
-		if strings.HasPrefix(line, "ci:") {
-			if strings.Contains(line, "no") || strings.Contains(line, "false") {
-				return queues
-			}
-			if strings.Contains(line, "yes") || strings.Contains(line, "true") {
-				for i := range c.cfg.Queues {
+	NEXTQUEUE:
+	for i := range c.cfg.Queues {
+		re := regexp.MustCompile(c.cfg.Queues[i].PathMatch)
+
+		for commit := range data.Commits {
+			for _, file := range data.Commits[commit].Added {
+				if re.MatchString(file) {
 					queues = append(queues, c.cfg.Queues[i])
+					continue NEXTQUEUE
 				}
-				return queues
+			}
+
+			for _, file := range data.Commits[commit].Modified {
+				if re.MatchString(file) {
+					queues = append(queues, c.cfg.Queues[i])
+					continue NEXTQUEUE
+				}
 			}
 		}
-	}
-
-	for _, name := range c.cfg.DefaultQueues {
-		q, ok := c.queues[name]
-		if !ok {
-			continue
-		}
-		queues = append(queues, *q)
 	}
 
 	return queues
@@ -205,7 +178,7 @@ func (c *controller) sendStatusUpdate(j *job, b *build) error {
 	}
 
 	url := fmt.Sprintf("%s/repos/%s/statuses/%s?access_token=%s",
-		c.cfg.Repository.APIURL, j.RepoFullName, j.CommitID, c.cfg.Repository.APIToken)
+		c.cfg.Repository.APIURL, j.PushEvent.Repository.FullName, j.PushEvent.CommitID, c.cfg.Repository.APIToken)
 
 	jsonValue, _ := json.Marshal(map[string]string{
 		"state":      b.Status,
@@ -233,9 +206,8 @@ func (c *controller) startWorker(q *queue) {
 
 			env := append(os.Environ(),
 				fmt.Sprintf("JOB_ID=%s", j.ID),
-				fmt.Sprintf("COMMIT_ID=%s", j.CommitID),
-				fmt.Sprintf("REPO_URL=%s", j.RepoCloneURL),
-				fmt.Sprintf("JOB_PORT=%s", j.Port),
+				fmt.Sprintf("COMMIT_ID=%s", j.PushEvent.CommitID),
+				fmt.Sprintf("REPO_URL=%s", j.PushEvent.Repository.CloneURL),
 			)
 
 			for k, v := range q.Environment {
@@ -312,28 +284,15 @@ func (c *controller) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	port := getPortFromMessage(data.Commits[0].Message)
-	if port == "" {
-		fmt.Fprint(w, "No category/port detected in commit message")
-		return
-	}
-
 	job := job{
 		ID:           time.Now().Format("20060102150405.000"),
-		Port:         port,
-		CommitID:     data.CommitID,
-		CommitMsg:    data.Commits[0].Message,
-		CommitURL:    data.Commits[0].URL,
-		RepoName:     data.Repository.Name,
-		RepoFullName: data.Repository.FullName,
-		RepoHTMLURL:  data.Repository.HTMLURL,
-		RepoCloneURL: data.Repository.CloneURL,
 		Startdate:    time.Now(),
 		Build:        make(map[string]*build),
+		PushEvent:    data,
 	}
 
 	cnt := 0
-	for _, q := range c.getQueueInfoFromMessage(data.Commits[0].Message) {
+	for _, q := range c.matchQueues(data) {
 		b := build{
 			ID:     fmt.Sprintf("%03d", cnt+1),
 			Queue:  q.Name,
@@ -344,7 +303,7 @@ func (c *controller) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		select {
 		case q.queue <- &job:
 			cnt++
-			log.Printf("ID %s Port %s queued on %s (pos %d)\n", job.ID, job.Port, q.Name, len(q.queue))
+			log.Printf("ID %s queued on %s (pos %d)\n", job.ID, q.Name, len(q.queue))
 		default:
 			log.Printf("ID %s Queue limit reached on queue %s\n", job.ID, q.Name)
 		}
@@ -427,6 +386,17 @@ func parseConfig(file string) config {
 	cfg.Logdir, _ = filepath.Abs(cfg.Logdir)
 	cfg.Server.BaseURL = strings.TrimSuffix(cfg.Server.BaseURL, "/")
 	cfg.Repository.APIURL = strings.TrimSuffix(cfg.Repository.APIURL, "/")
+
+	for i := range cfg.Queues {
+		if cfg.Queues[i].PathMatch == "" {
+			cfg.Queues[i].PathMatch = "^.*$"
+		}
+
+		_, err := regexp.Compile(cfg.Queues[i].PathMatch)
+		if err != nil {
+			log.Fatalf("Error: %v", err)
+		}
+	}
 
 	return cfg
 }

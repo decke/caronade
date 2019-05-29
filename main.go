@@ -227,8 +227,7 @@ func (c *controller) startWorker(q *queue) {
 				Args: []string{
 					"make",
 					"-C", q.Workdir,
-					"-f", fmt.Sprintf("%s.mk", q.Recipe),
-					"-I", c.cfg.Workdir,
+					"-f", fmt.Sprintf("%s%s.mk", c.cfg.Workdir, q.Recipe),
 					"all",
 				},
 			}

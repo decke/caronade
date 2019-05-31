@@ -242,7 +242,7 @@ func (c *controller) startWorker(q *queue) {
 
 			b.Logfile = path.Join(c.cfg.Logdir, j.ID, b.ID+".log")
 			os.MkdirAll(filepath.Dir(b.Logfile), os.ModePerm)
-			ioutil.WriteFile(b.Logfile, output, 0600)
+			ioutil.WriteFile(b.Logfile, output, 0644)
 
 			log.Printf("ID %s on %s finished %s\n", j.ID, q.Name, b.Status)
 			c.sendStatusUpdate(j, b)

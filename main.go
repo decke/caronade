@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	texttemplate "text/template"
 	"time"
 
 	"github.com/NYTimes/gziphandler"
@@ -170,6 +171,23 @@ func (c *controller) renderBuildTemplate(j *job) {
 	outfile.Sync()
 }
 
+func (c *controller) evalEnvVariable(j *job, key string, val string) (string, string) {
+	tmpl, err := texttemplate.New(key).Parse(val)
+	if err != nil {
+		log.Printf("Failed parsing env var %s=%s: %v", key, val, err)
+		return key, ""
+	}
+
+	var out bytes.Buffer
+	err = tmpl.Execute(&out, &j)
+	if err != nil {
+		log.Printf("Failed executing env var %s: %v", key, err)
+		return key, ""
+	}
+
+	return key, out.String()
+}
+
 func (c *controller) sendStatusUpdate(j *job, b *build) error {
 	target := ""
 
@@ -208,14 +226,10 @@ func (c *controller) startWorker(q *queue) {
 			log.Printf("ID %s started on %s\n", j.ID, q.Name)
 			c.sendStatusUpdate(j, b)
 
-			env := append(os.Environ(),
-				fmt.Sprintf("JOB_ID=%s", j.ID),
-				fmt.Sprintf("COMMIT_ID=%s", j.PushEvent.CommitID),
-				fmt.Sprintf("REPO_URL=%s", j.PushEvent.Repository.CloneURL),
-			)
-
+			env := os.Environ()
 			for k, v := range q.Environment {
-				env = append(env, fmt.Sprintf("%s=%s", k, v))
+				key, val := c.evalEnvVariable(j, k, v)
+				env = append(env, fmt.Sprintf("%s=%s", key, val))
 			}
 
 			os.MkdirAll(q.Workdir, os.ModePerm)
@@ -398,6 +412,31 @@ func parseConfig(file string) config {
 		_, err := regexp.Compile(cfg.Queues[i].PathMatch)
 		if err != nil {
 			log.Fatalf("Error: %v", err)
+		}
+
+		_, ok := cfg.Queues[i].Environment["JOB_ID"]
+		if ! ok {
+			cfg.Queues[i].Environment["JOB_ID"] = "{{.ID}}"
+		}
+
+		_, ok = cfg.Queues[i].Environment["COMMIT_ID"]
+		if ! ok {
+			cfg.Queues[i].Environment["COMMIT_ID"] = "{{.PushEvent.CommitID}}"
+		}
+
+		_, ok = cfg.Queues[i].Environment["REPO_URL"]
+		if ! ok {
+			cfg.Queues[i].Environment["REPO_URL"] = "{{.PushEvent.Repository.HTMLURL}}"
+		}
+
+		_, ok = cfg.Queues[i].Environment["AUTHOR"]
+		if ! ok {
+			cfg.Queues[i].Environment["AUTHOR"] = "{{(index .PushEvent.Commits 0).Author.Username}}"
+		}
+
+		_, ok = cfg.Queues[i].Environment["AUTHOR_EMAIL"]
+		if ! ok {
+			cfg.Queues[i].Environment["AUTHOR_EMAIL"] = "{{(index .PushEvent.Commits 0).Author.EMail}}"
 		}
 	}
 

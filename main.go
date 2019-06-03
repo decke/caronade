@@ -66,6 +66,7 @@ type queue struct {
 
 type job struct {
 	ID        string
+	Port      string
 	Startdate time.Time
 	Enddate   time.Time
 	Build     map[string]*build
@@ -111,6 +112,24 @@ func calcSignature(payload *[]byte, secret string) string {
 	return fmt.Sprintf("sha1=%x", mac.Sum(nil))
 }
 
+func getAffectedPort(data gitPushEventData) string {
+	lines := strings.Split(data.Commits[0].Message, "\n")
+
+	if len(lines) < 1 || strings.IndexByte(lines[0], ':') < 1 {
+		return ""
+	}
+
+	re := regexp.MustCompile(`^([a-z0-9-]+)/([a-zA-Z0-9-_.]+)$`)
+
+	port := strings.TrimSpace(lines[0][:strings.IndexByte(lines[0], ':')])
+
+	if re.MatchString(port) {
+		return port
+	}
+
+	return ""
+}
+
 func (c *controller) matchQueues(data gitPushEventData) []queue {
 	queues := make([]queue, 0)
 
@@ -119,6 +138,7 @@ NEXTQUEUE:
 		re := regexp.MustCompile(c.cfg.Queues[i].PathMatch)
 
 		for commit := range data.Commits {
+			// Queue name match against PathMatch config
 			for _, file := range data.Commits[commit].Added {
 				if re.MatchString(file) {
 					queues = append(queues, c.cfg.Queues[i])
@@ -131,6 +151,28 @@ NEXTQUEUE:
 					queues = append(queues, c.cfg.Queues[i])
 					continue NEXTQUEUE
 				}
+			}
+
+			// Queue name from commit message tags (CI: yes/no/true/false)
+			lines := strings.Split(data.Commits[commit].Message, "\n")
+			for _, line := range lines {
+				line = strings.ToLower(line)
+				if strings.HasPrefix(line, "ci:") {
+					if strings.Contains(line, "no") || strings.Contains(line, "false") {
+						continue NEXTQUEUE
+					}
+					if strings.Contains(line, "yes") || strings.Contains(line, "true") {
+						queues = append(queues, c.cfg.Queues[i])
+						continue NEXTQUEUE
+					}
+				}
+			}
+		}
+
+		// Queue name from DefaultQueues config
+		for _, q := range c.cfg.DefaultQueues {
+			if q == c.cfg.Queues[i].Name {
+				queues = append(queues, c.cfg.Queues[i])
 			}
 		}
 	}
@@ -301,6 +343,12 @@ func (c *controller) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	port := getAffectedPort(data)
+	if port == "" {
+		fmt.Fprint(w, "No category/port detected")
+		return
+	}
+
 	job := job{
 		ID:        time.Now().Format("20060102150405.000"),
 		Startdate: time.Now(),
@@ -406,9 +454,8 @@ func parseConfig(file string) config {
 
 	for i := range cfg.Queues {
 		if cfg.Queues[i].PathMatch == "" {
-			cfg.Queues[i].PathMatch = "^.*$"
+			cfg.Queues[i].PathMatch = "^$"
 		}
-
 		_, err := regexp.Compile(cfg.Queues[i].PathMatch)
 		if err != nil {
 			log.Fatalf("Error: %v", err)
@@ -417,6 +464,11 @@ func parseConfig(file string) config {
 		_, ok := cfg.Queues[i].Environment["JOB_ID"]
 		if ! ok {
 			cfg.Queues[i].Environment["JOB_ID"] = "{{.ID}}"
+		}
+
+		_, ok = cfg.Queues[i].Environment["JOB_PORT"]
+		if ! ok {
+			cfg.Queues[i].Environment["JOB_PORT"] = "{{.Port}}"
 		}
 
 		_, ok = cfg.Queues[i].Environment["COMMIT_ID"]

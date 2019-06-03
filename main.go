@@ -479,7 +479,7 @@ func parseConfig(file string) config {
 
 		_, ok = cfg.Queues[i].Environment["REPO_URL"]
 		if ! ok {
-			cfg.Queues[i].Environment["REPO_URL"] = "{{.PushEvent.Repository.HTMLURL}}"
+			cfg.Queues[i].Environment["REPO_URL"] = "{{.PushEvent.Repository.CloneURL}}"
 		}
 
 		_, ok = cfg.Queues[i].Environment["AUTHOR"]

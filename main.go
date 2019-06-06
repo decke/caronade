@@ -477,32 +477,32 @@ func parseConfig(file string) config {
 		}
 
 		_, ok := cfg.Queues[i].Environment["JOB_ID"]
-		if ! ok {
+		if !ok {
 			cfg.Queues[i].Environment["JOB_ID"] = "{{.ID}}"
 		}
 
 		_, ok = cfg.Queues[i].Environment["JOB_PORT"]
-		if ! ok {
+		if !ok {
 			cfg.Queues[i].Environment["JOB_PORT"] = "{{.Port}}"
 		}
 
 		_, ok = cfg.Queues[i].Environment["COMMIT_ID"]
-		if ! ok {
+		if !ok {
 			cfg.Queues[i].Environment["COMMIT_ID"] = "{{.PushEvent.CommitID}}"
 		}
 
 		_, ok = cfg.Queues[i].Environment["REPO_URL"]
-		if ! ok {
+		if !ok {
 			cfg.Queues[i].Environment["REPO_URL"] = "{{.PushEvent.Repository.CloneURL}}"
 		}
 
 		_, ok = cfg.Queues[i].Environment["AUTHOR"]
-		if ! ok {
+		if !ok {
 			cfg.Queues[i].Environment["AUTHOR"] = "{{(index .PushEvent.Commits 0).Author.Username}}"
 		}
 
 		_, ok = cfg.Queues[i].Environment["AUTHOR_EMAIL"]
-		if ! ok {
+		if !ok {
 			cfg.Queues[i].Environment["AUTHOR_EMAIL"] = "{{(index .PushEvent.Commits 0).Author.EMail}}"
 		}
 	}

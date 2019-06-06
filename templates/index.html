@@ -13,7 +13,7 @@
 		<nav class="navbar is-light" role="navigation" aria-label="main navigation">
 			<div class="navbar-brand">
 				<a class="navbar-item">
-					<img class="img" src="logo.png" alt="logo" />
+					<img class="img" src="../../static/logo.png" alt="logo" />
 				</a>
 			</div>
 		</nav>
@@ -27,7 +27,7 @@
 						<div class="level-item">
 							<p>
 								<span class="tag is-info">decke</span> committed
-								<a href="{{(index .PushEvent.Commits 0).URL}}">{{.PushEvent.CommitID}</a>
+								<a href="{{(index .PushEvent.Commits 0).URL}}">{{.PushEvent.CommitID}}</a>
 								to
 								<a href="{{.PushEvent.Repository.HTMLURL}}">{{.PushEvent.Repository.FullName}}</a>
 							</p>
@@ -61,7 +61,7 @@
 			<article class="message">
 				<div class="message-header">
 					<p>{{.Queue}}</p>
-					<a class="is-right" href="{{.ID}.log"><span class="icon icon-download"></span></a>
+					<a class="is-right" href="{{.ID}}.log"><span class="icon icon-download"></span></a>
 				</div>
 				<div class="message-body">
 					<pre><code>{{.LogfileContent}}</code></pre>

@@ -26,20 +26,22 @@
 						<div class="tile is-parent is-vertical">
 
 							<article class="tile is-child message">
-								<div class="message-header"># {{.ID}}</div>
-								<div class="message-body level">
-									<div class="level-left">
-										<div class="level-item">
-											<p>
-												<span class="tag is-info">decke</span> committed
-												<a href="{{(index .PushEvent.Commits 0).URL}}">{{.PushEvent.CommitID}}</a>
-												to
-												<a href="{{.PushEvent.Repository.HTMLURL}}">{{.PushEvent.Repository.FullName}}</a>
-											</p>
+								<div class="message-header">{{.Port}}</div>
+								<div class="message-body">
+									<p>
+										<a href="{{(index .PushEvent.Commits 0).URL}}">{{.PushEvent.CommitID}}</a>
+										was committed to
+										<a href="{{.PushEvent.Repository.HTMLURL}}">{{.PushEvent.Repository.FullName}}</a>
+									</p>
+									<br />
+									<div class="field is-grouped is-grouped-multiline">
+										<div class="control">
+											<div class="tags has-addons">
+												<span class="tag is-dark">port</span>
+												<a class="tag is-danger" href="https://www.freshports.org/{{.Port}}">{{.Port}}</a>
+											</div>
 										</div>
-									</div>
-									<div class="level-right">
-										<div class="level-item">
+										<div class="control">
 											<div class="tags has-addons">
 												<span class="tag is-dark">build start</span>
 												<span class="tag is-info">{{.StartDate}}</span>

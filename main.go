@@ -462,6 +462,10 @@ func parseConfig(file string) config {
 			log.Fatalf("Error: %v", err)
 		}
 
+		if cfg.Queues[i].Environment == nil {
+			cfg.Queues[i].Environment = map[string]string{}
+		}
+
 		_, ok := cfg.Queues[i].Environment["JOB_ID"]
 		if ! ok {
 			cfg.Queues[i].Environment["JOB_ID"] = "{{.ID}}"

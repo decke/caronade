@@ -184,6 +184,16 @@ func (j *job) StartDate() string {
 	return j.Startdate.Format(time.RFC850)
 }
 
+func (j *job) EndDate() string {
+	return j.Enddate.Format(time.RFC850)
+}
+
+func (b *build) Runtime() string {
+	diff := b.Enddate.Sub(b.Startdate).Round(time.Second)
+
+	return fmt.Sprintf("%s", diff.String())
+}
+
 func (b *build) LogfileContent() string {
 	raw, err := ioutil.ReadFile(b.Logfile)
 	if err != nil {

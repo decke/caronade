@@ -26,21 +26,32 @@ webhook:
 #    events: Push events
   secret:
 
-repository:
+notification:
 
-# example github:
+# Status API (Github)
 #  Token needs to be generated from github webinterface:
 #  user settings -> developer settings -> personal access tokens -> repo:status
 #
-# apiurl: https://api.github.com/
-# apitoken:
+#  statusapi:
+#    apiurl: https://api.github.com/
+#    apitoken:
 
-# example gitea:
+# Status API (Gitea)
 #  Token needs to be generated from gitea webinterface:
 #  user settings -> applications -> generate token
 #
-# apiurl: https://you-repo.com/api/v1/
-# apitoken:
+#  statusapi:
+#    apiurl: https://you-repo.com/api/v1/
+#    apitoken:
+
+# SMTP / EMail
+#  An EMail per commit can be send via SMTP to the committer.
+#
+#  email:
+#    smtphost: smtp.gmail.com:587
+#    smtpuser:
+#    smtppass:
+#    from: sender@domain.example
 
 queues:
 - name: 11.2/amd64

@@ -1,0 +1,16 @@
+To: {{(index .PushEvent.Commits 0).Author.Name}} <{{(index .PushEvent.Commits 0).Author.EMail}}>
+Subject: caronade build: {{.Port}} {{.StatusOverall}}
+
+Date: {{.StartDate}}
+Commit: {{.PushEvent.CommitID}}
+URL: {{(index .PushEvent.Commits 0).URL}}
+
+Log:
+{{(index .PushEvent.Commits 0).Message}}
+
+Builds:
+  URL: {{.BaseURL}}/{{.ID}}/
+{{range .Build}}
+  Queue: {{.Queue}} {{.Status}} ({{.Runtime}})
+  Logfile: {{$.BaseURL}}/{{$.ID}}/{{.ID}}.log
+{{end}}

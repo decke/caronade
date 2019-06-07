@@ -12,7 +12,9 @@ import (
 	"html/template"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
+	"net/smtp"
 	"os"
 	"os/exec"
 	"path"
@@ -47,9 +49,17 @@ type config struct {
 	Webhook struct {
 		Secret string
 	}
-	Repository struct {
-		APIURL   string
-		APIToken string
+	Notification struct {
+		StatusAPI struct {
+			URL   string
+			Token string
+		}
+		Email struct {
+			SmtpHost string
+			SmtpUser string
+			SmtpPass string
+			From     string
+		}
 	}
 	Queues        []queue
 	DefaultQueues []string `yaml:"default_queues"`
@@ -71,6 +81,7 @@ type job struct {
 	Enddate   time.Time
 	Build     map[string]*build
 	PushEvent gitPushEventData
+	BaseURL   string
 }
 
 type build struct {
@@ -180,6 +191,25 @@ NEXTQUEUE:
 	return queues
 }
 
+func (j *job) StatusOverall() string {
+
+	// status: pending | failure | success
+
+	for _, b := range j.Build {
+		if b.Status == "pending" {
+			return b.Status
+		}
+	}
+
+	for _, b := range j.Build {
+		if b.Status == "failure" {
+			return b.Status
+		}
+	}
+
+	return "success"
+}
+
 func (j *job) StartDate() string {
 	return j.Startdate.Format(time.RFC850)
 }
@@ -227,6 +257,23 @@ func (c *controller) renderBuildTemplate(j *job) {
 	outfile.Sync()
 }
 
+func (c *controller) renderEmailTemplate(j *job) string {
+	tmpl, err := texttemplate.ParseFiles(path.Join(c.cfg.Tmpldir, "email.txt"))
+	if err != nil {
+		log.Printf("Failed parsing template: %v", err)
+		return ""
+	}
+
+	var out bytes.Buffer
+	err = tmpl.Execute(&out, &j)
+	if err != nil {
+		log.Printf("Failed executing template: %v", err)
+		return ""
+	}
+
+	return out.String()
+}
+
 func (c *controller) evalEnvVariable(j *job, key string, val string) (string, string) {
 	tmpl, err := texttemplate.New(key).Parse(val)
 	if err != nil {
@@ -251,9 +298,10 @@ func (c *controller) sendStatusUpdate(j *job, b *build) error {
 		target = fmt.Sprintf("%s/builds/%s/", c.cfg.Server.BaseURL, j.ID)
 	}
 
-	if c.cfg.Repository.APIURL != "" {
+	if c.cfg.Notification.StatusAPI.URL != "" {
 		url := fmt.Sprintf("%s/repos/%s/statuses/%s?access_token=%s",
-			c.cfg.Repository.APIURL, j.PushEvent.Repository.FullName, j.PushEvent.CommitID, c.cfg.Repository.APIToken)
+			c.cfg.Notification.StatusAPI.URL, j.PushEvent.Repository.FullName,
+			j.PushEvent.CommitID, c.cfg.Notification.StatusAPI.Token)
 
 		jsonValue, _ := json.Marshal(map[string]string{
 			"state":      b.Status,
@@ -263,7 +311,32 @@ func (c *controller) sendStatusUpdate(j *job, b *build) error {
 
 		_, err := http.Post(url, "application/json", bytes.NewBuffer(jsonValue))
 
-		return err
+		if err != nil {
+			log.Printf("StatusAPI request to %s failed: %s\n", url, err)
+		}
+	}
+
+	if c.cfg.Notification.Email.SmtpHost != "" && j.StatusOverall() != "pending" {
+		data := c.renderEmailTemplate(j)
+		if data != "" {
+			var auth smtp.Auth
+			host, _, _ := net.SplitHostPort(c.cfg.Notification.Email.SmtpHost)
+
+			if c.cfg.Notification.Email.SmtpUser != "" && c.cfg.Notification.Email.SmtpPass != "" {
+				auth = smtp.PlainAuth("", c.cfg.Notification.Email.SmtpUser, c.cfg.Notification.Email.SmtpPass, host)
+			}
+
+			err := smtp.SendMail(
+				c.cfg.Notification.Email.SmtpHost,
+				auth,
+				c.cfg.Notification.Email.From,
+				[]string{j.PushEvent.Commits[0].Author.EMail},
+				[]byte(data),
+			)
+			if err != nil {
+				log.Printf("EMail delivery failed: %v\n", err)
+			}
+		}
 	}
 
 	return nil
@@ -372,6 +445,7 @@ func (c *controller) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		Startdate: time.Now(),
 		Build:     make(map[string]*build),
 		PushEvent: data,
+		BaseURL:   c.cfg.Server.BaseURL,
 	}
 
 	cnt := 0
@@ -468,7 +542,7 @@ func parseConfig(file string) config {
 	cfg.Workdir, _ = filepath.Abs(cfg.Workdir)
 	cfg.Logdir, _ = filepath.Abs(cfg.Logdir)
 	cfg.Server.BaseURL = strings.TrimSuffix(cfg.Server.BaseURL, "/")
-	cfg.Repository.APIURL = strings.TrimSuffix(cfg.Repository.APIURL, "/")
+	cfg.Notification.StatusAPI.URL = strings.TrimSuffix(cfg.Notification.StatusAPI.URL, "/")
 
 	for i := range cfg.Queues {
 		if cfg.Queues[i].PathMatch == "" {

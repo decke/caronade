@@ -295,7 +295,7 @@ func (c *controller) sendStatusUpdate(j *job, b *build) error {
 	target := ""
 
 	if b.Status != "pending" {
-		target = fmt.Sprintf("%s/builds/%s/", c.cfg.Server.BaseURL, j.ID)
+		target = j.BaseURL
 	}
 
 	if c.cfg.Notification.StatusAPI.URL != "" {
@@ -445,8 +445,10 @@ func (c *controller) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		Startdate: time.Now(),
 		Build:     make(map[string]*build),
 		PushEvent: data,
-		BaseURL:   c.cfg.Server.BaseURL,
+		BaseURL:   "",
 	}
+
+	job.BaseURL = fmt.Sprintf("%s/%s/%s/", c.cfg.Server.BaseURL, "builds", job.ID)
 
 	cnt := 0
 	for _, q := range c.matchQueues(data) {

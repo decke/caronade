@@ -9,8 +9,8 @@ Log:
 {{(index .PushEvent.Commits 0).Message}}
 
 Builds:
-  URL: {{.BaseURL}}/{{.ID}}/
+  URL: {{.BaseURL}}
 {{range .Build}}
   Queue: {{.Queue}} {{.Status}} ({{.Runtime}})
-  Logfile: {{$.BaseURL}}/{{$.ID}}/{{.ID}}.log
+  Logfile: {{$.BaseURL}}{{.ID}}.log
 {{end}}

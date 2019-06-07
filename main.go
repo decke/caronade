@@ -188,6 +188,10 @@ func (j *job) EndDate() string {
 	return j.Enddate.Format(time.RFC850)
 }
 
+func (j *job) TimeNow() string {
+	return time.Now().Format(time.RFC850)
+}
+
 func (b *build) Runtime() string {
 	diff := b.Enddate.Sub(b.Startdate).Round(time.Second)
 
@@ -276,7 +280,11 @@ func (c *controller) startWorker(q *queue) {
 			b.Startdate = time.Now()
 
 			log.Printf("ID %s started on %s\n", j.ID, q.Name)
+
+			os.MkdirAll(path.Join(c.cfg.Logdir, j.ID), os.ModePerm)
+
 			c.sendStatusUpdate(j, b)
+			c.renderBuildTemplate(j)
 
 			env := os.Environ()
 			for k, v := range q.Environment {
@@ -307,7 +315,6 @@ func (c *controller) startWorker(q *queue) {
 			j.Enddate = time.Now()
 
 			b.Logfile = path.Join(c.cfg.Logdir, j.ID, b.ID+".log")
-			os.MkdirAll(filepath.Dir(b.Logfile), os.ModePerm)
 			ioutil.WriteFile(b.Logfile, output, 0644)
 
 			log.Printf("ID %s on %s finished %s\n", j.ID, q.Name, b.Status)

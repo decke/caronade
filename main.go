@@ -440,7 +440,7 @@ func (c *controller) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	job := job{
-		ID:        time.Now().Format("20060102150405.000"),
+		ID:        time.Now().Format("20060102-15:04:05.000"),
 		Port:      port,
 		Startdate: time.Now(),
 		Build:     make(map[string]*build),

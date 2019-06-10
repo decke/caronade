@@ -65,7 +65,7 @@ checkout: clean
 	git -C "${REPODIR}" -c advice.detachedHead=false checkout ${COMMIT_ID}
 
 prepare:
-	poudriere ports -u ${PORTSTREE}
+	poudriere ports -u -p ${PORTSTREE}
 	zfs snapshot ${ZPORTSFS}@clean
 
 	(cd ${REPODIR} && find * \! -path "Mk/*" -type d -depth +0 -maxdepth 1 \

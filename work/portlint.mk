@@ -35,9 +35,9 @@ REPODIR?=	${WORKDIR}/repo.git
 .error "JOB_PORT variable is not set!"
 .endif
 
-all: checkout build clean
+all: pre-clean checkout build post-clean
 
-checkout: clean
+checkout:
 	git clone ${REPO_URL} ${REPODIR}
 	git -C "${REPODIR}" -c advice.detachedHead=false checkout ${COMMIT_ID}
 	@echo
@@ -45,7 +45,7 @@ checkout: clean
 build:
 	portlint -A ${REPODIR}/${JOB_PORT}
 
-clean:
+pre-clean post-clean:
 	rm -rf ${REPODIR}
 
-.PHONY: all checkout build clean
+.PHONY: all checkout build pre-clean post-clean

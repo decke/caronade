@@ -58,9 +58,9 @@ PORTSPATH!=	zfs get -H mountpoint ${ZPORTSFS} | cut -f3
 .export REPODIR
 .export PORTSPATH
 
-all: checkout prepare build clean
+all: pre-clean checkout prepare build post-clean
 
-checkout: clean
+checkout:
 	git clone ${REPO_URL} ${REPODIR}
 	git -C "${REPODIR}" -c advice.detachedHead=false checkout ${COMMIT_ID}
 
@@ -76,9 +76,9 @@ prepare:
 build:
 	poudriere testport -j ${JAIL_NAME} -p ${PORTSTREE} ${JOB_PORT}
 
-clean:
+pre-clean post-clean:
 	rm -rf ${REPODIR}
 	@zfs rollback ${ZPORTSFS}@clean || true
 	@zfs destroy ${ZPORTSFS}@clean || true
 
-.PHONY: all checkout prepare build clean
+.PHONY: all checkout prepare build pre-clean post-clean

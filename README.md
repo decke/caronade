@@ -14,7 +14,8 @@ portlint whenever you push changes to your Git based ports repository.
 * [GitHub](https://github.com/) and [Gitea](https://gitea.io/) integration (Webhooks, Status API)
 * [Poudriere](https://github.com/freebsd/poudriere/wiki) support for building
 * Portlint support to verify port files
-* Webserver for logfiles with HTTP/HTTPS support
+* EMail notifications
+* Built-in webserver for Web UI and logfiles with HTTPS support
 
 
 ## Getting Started

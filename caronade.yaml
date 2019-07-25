@@ -33,16 +33,16 @@ notification:
 #  user settings -> developer settings -> personal access tokens -> repo:status
 #
 #  statusapi:
-#    apiurl: https://api.github.com/
-#    apitoken:
+#    url: https://api.github.com/
+#    token:
 
 # Status API (Gitea)
 #  Token needs to be generated from gitea webinterface:
 #  user settings -> applications -> generate token
 #
 #  statusapi:
-#    apiurl: https://you-repo.com/api/v1/
-#    apitoken:
+#    url: https://you-repo.com/api/v1/
+#    token:
 
 # SMTP / EMail
 #  An EMail per commit can be send via SMTP to the committer.

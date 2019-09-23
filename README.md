@@ -87,7 +87,7 @@ generated for all queues specified in `default_queues` in `caronade.yaml`.
 
 [FreeBSD Ports](https://www.freebsd.org/doc/en/books/porters-handbook/) are a great
 and huge collection of 3rd party sofware. For people working with ports it is very
-monotonic to do a lot of build testing to verify that your changes/new port builds
+monotonous to do a lot of build testing to verify that your changes/new port builds
 fine in many different combinations (FreeBSD versions, architectures, Port options etc.).
 
 Caronade does the testing for you while you continue with your work.

@@ -1,6 +1,6 @@
 # caronade
 
-[![Go Report Card](https://goreportcard.com/badge/code.bluelife.at/decke/caronade)](https://goreportcard.com/report/code.bluelife.at/decke/caronade) [![Chat on IRC](https://img.shields.io/badge/chat-freenode%20%23caronade-brightgreen.svg)](https://webchat.freenode.net/?channels=%23caronade)
+[![Go Report Card](https://goreportcard.com/badge/github.com/decke/caronade)](https://goreportcard.com/report/github.com/decke/caronade) [![Chat on IRC](https://img.shields.io/badge/chat-freenode%20%23caronade-brightgreen.svg)](https://webchat.freenode.net/?channels=%23caronade)
 
 A small and light tool to help with FreeBSD Ports CI (Continuous Integration).
 

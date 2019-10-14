@@ -1,4 +1,4 @@
-module code.bluelife.at/decke/caronade
+module github.com/decke/caronade
 
 require (
 	github.com/NYTimes/gziphandler v1.1.1

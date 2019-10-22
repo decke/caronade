@@ -11,7 +11,7 @@ portlint whenever you push changes to your Git based ports repository.
 ## Main features
 
 * Simple to setup and maintain
-* [GitHub](https://github.com/) and [Gitea](https://gitea.io/) integration (Webhooks, Status API)
+* [GitHub](https://github.com/) integration (Webhooks, Status API)
 * [Poudriere](https://github.com/freebsd/poudriere/wiki) support for building
 * Portlint support to verify port files
 * EMail notifications
@@ -28,7 +28,7 @@ own portstree to be able to run jobs in parallel.
 
 ### Requirements
 
-* git repository (GitHub or Gitea) with your ports
+* git repository (GitHub) with your ports
 * [poudriere](https://github.com/freebsd/poudriere) on ZFS
 * caronade needs to be reachable from the Internet
 

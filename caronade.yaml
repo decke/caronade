@@ -18,12 +18,6 @@ webhook:
 #    content type: application/json
 #    secret: same as below
 #    events: Just the push event
-#
-#  gitea: repository settings -> webhooks -> add webhook (type Gitea)
-#    target url: baseurl from above
-#    content type: application/json
-#    secret: same as below
-#    events: Push events
   secret:
 
 notification:
@@ -34,14 +28,6 @@ notification:
 #
 #  statusapi:
 #    url: https://api.github.com/
-#    token:
-
-# Status API (Gitea)
-#  Token needs to be generated from gitea webinterface:
-#  user settings -> applications -> generate token
-#
-#  statusapi:
-#    url: https://you-repo.com/api/v1/
 #    token:
 
 # SMTP / EMail

@@ -406,24 +406,27 @@ func (c *controller) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Header.Get("X-GitHub-Event") != "" {
-		if r.Header.Get("X-GitHub-Event") != "push" {
-			http.Error(w, "Invalid webhook", http.StatusBadRequest)
+	if c.cfg.Webhook.Secret != "" {
+		if calcSignature(&payload, c.cfg.Webhook.Secret) != r.Header.Get("X-Hub-Signature") {
+			http.Error(w, "Invalid secret", http.StatusBadRequest)
 			return
 		}
+	}
+
+	if r.Header.Get("X-GitHub-Event") == "ping" {
+		fmt.Fprint(w, "pong")
+		return
+	}
+
+	if r.Header.Get("X-GitHub-Event") != "push" {
+		http.Error(w, "Invalid webhook", http.StatusBadRequest)
+		return
 	}
 
 	data := gitPushEventData{}
 	if err = json.Unmarshal(payload, &data); err != nil {
 		http.Error(w, "Failed to parse webhook data", http.StatusBadRequest)
 		return
-	}
-
-	if c.cfg.Webhook.Secret != "" {
-		if calcSignature(&payload, c.cfg.Webhook.Secret) != r.Header.Get("X-Hub-Signature") {
-			http.Error(w, "Invalid secret", http.StatusBadRequest)
-			return
-		}
 	}
 
 	port := getAffectedPort(data)

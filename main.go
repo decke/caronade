@@ -420,16 +420,9 @@ func (c *controller) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if c.cfg.Webhook.Secret != "" {
-		if r.Header.Get("X-Hub-Signature") != "" {
-			if calcSignature(&payload, c.cfg.Webhook.Secret) != r.Header.Get("X-Hub-Signature") {
-				http.Error(w, "Invalid secret", http.StatusBadRequest)
-				return
-			}
-		} else {
-			if data.Secret != c.cfg.Webhook.Secret {
-				http.Error(w, "Invalid secret", http.StatusBadRequest)
-				return
-			}
+		if calcSignature(&payload, c.cfg.Webhook.Secret) != r.Header.Get("X-Hub-Signature") {
+			http.Error(w, "Invalid secret", http.StatusBadRequest)
+			return
 		}
 	}
 

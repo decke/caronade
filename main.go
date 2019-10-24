@@ -93,7 +93,6 @@ type build struct {
 }
 
 type gitPushEventData struct {
-	Secret     string `json:"secret"`
 	CommitID   string `json:"after"`
 	Repository struct {
 		Name      string `json:"name"`

@@ -70,7 +70,7 @@ repository then you need to create an GitHub API Token for that.
 github: user settings -> developer settings -> personal access tokens -> repo:status
 ```
 
-The token and API URL needs to be set in `caronade.yaml`.
+The token needs to be set in `caronade.yaml`.
 
 ### Usage
 

@@ -1,12 +1,12 @@
-To: {{(index .PushEvent.Commits 0).Author.Name}} <{{(index .PushEvent.Commits 0).Author.EMail}}>
+To: {{(index .PushEvent.Commits .CommitIdx).Author.Name}} <{{(index .PushEvent.Commits .CommitIdx).Author.EMail}}>
 Subject: caronade build: {{.Port}} {{.StatusOverall}}
 
 Date: {{.StartDate}}
-Commit: {{.PushEvent.CommitID}}
-URL: {{(index .PushEvent.Commits 0).URL}}
+Commit: {{(index .PushEvent.Commits .CommitIdx).CommitID}}
+URL: {{(index .PushEvent.Commits .CommitIdx).URL}}
 
 Log:
-{{(index .PushEvent.Commits 0).Message}}
+{{(index .PushEvent.Commits .CommitIdx).Message}}
 
 Builds:
   URL: {{.BaseURL}}

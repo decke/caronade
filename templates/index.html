@@ -29,7 +29,7 @@
 								<div class="message-header">{{.Port}}</div>
 								<div class="message-body">
 									<p>
-										<a href="{{(index .PushEvent.Commits 0).URL}}">{{.PushEvent.CommitID}}</a>
+										<a href="{{(index .PushEvent.Commits .CommitIdx).URL}}">{{(index .PushEvent.Commits .CommitIdx).CommitID}}</a>
 										was committed to
 										<a href="{{.PushEvent.Repository.HTMLURL}}">{{.PushEvent.Repository.FullName}}</a>
 									</p>
@@ -53,7 +53,7 @@
 
 							<article class="tile is-child message">
 								<div class="message-body">
-									<pre><code>{{(index .PushEvent.Commits 0).Message}}</code></pre>
+									<pre><code>{{(index .PushEvent.Commits .CommitIdx).Message}}</code></pre>
 								</div>
 							</article>
 

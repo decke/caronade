@@ -80,6 +80,7 @@ type job struct {
 	Enddate   time.Time
 	Build     map[string]*build
 	PushEvent gitPushEventData
+	CommitIdx int
 	BaseURL   string
 }
 
@@ -93,7 +94,6 @@ type build struct {
 }
 
 type gitPushEventData struct {
-	CommitID   string `json:"after"`
 	Repository struct {
 		Name      string `json:"name"`
 		FullName  string `json:"full_name"`
@@ -102,9 +102,10 @@ type gitPushEventData struct {
 		CloneURL  string `json:"clone_url"`
 	} `json:"repository"`
 	Commits []struct {
-		Message string `json:"message"`
-		URL     string `json:"url"`
-		Author  struct {
+		CommitID string `json:"id"`
+		Message  string `json:"message"`
+		URL      string `json:"url"`
+		Author   struct {
 			Name     string `json:"name"`
 			EMail    string `json:"email"`
 			Username string `json:"username"`
@@ -298,7 +299,7 @@ func (c *controller) sendStatusUpdate(j *job, b *build) error {
 	}
 
 	if c.cfg.Notification.StatusAPI.Token != "" {
-		url := strings.Replace(j.PushEvent.Repository.StatusURL, "{sha}", j.PushEvent.CommitID, -1)
+		url := strings.Replace(j.PushEvent.Repository.StatusURL, "{sha}", j.PushEvent.Commits[j.CommitIdx].CommitID, -1)
 		url = url + "?access_token=" + c.cfg.Notification.StatusAPI.Token
 
 		jsonValue, _ := json.Marshal(map[string]string{
@@ -328,7 +329,7 @@ func (c *controller) sendStatusUpdate(j *job, b *build) error {
 				c.cfg.Notification.Email.SmtpHost,
 				auth,
 				c.cfg.Notification.Email.From,
-				[]string{j.PushEvent.Commits[0].Author.EMail},
+				[]string{j.PushEvent.Commits[j.CommitIdx].Author.EMail},
 				[]byte(data),
 			)
 			if err != nil {
@@ -439,6 +440,7 @@ func (c *controller) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		Startdate: time.Now(),
 		Build:     make(map[string]*build),
 		PushEvent: data,
+		CommitIdx: 0,
 		BaseURL:   "",
 	}
 
@@ -564,7 +566,7 @@ func parseConfig(file string) config {
 
 		_, ok = cfg.Queues[i].Environment["COMMIT_ID"]
 		if !ok {
-			cfg.Queues[i].Environment["COMMIT_ID"] = "{{.PushEvent.CommitID}}"
+			cfg.Queues[i].Environment["COMMIT_ID"] = "{{(index .PushEvent.Commits .CommitIdx).CommitID}}"
 		}
 
 		_, ok = cfg.Queues[i].Environment["REPO_URL"]
@@ -574,12 +576,12 @@ func parseConfig(file string) config {
 
 		_, ok = cfg.Queues[i].Environment["AUTHOR"]
 		if !ok {
-			cfg.Queues[i].Environment["AUTHOR"] = "{{(index .PushEvent.Commits 0).Author.Username}}"
+			cfg.Queues[i].Environment["AUTHOR"] = "{{(index .PushEvent.Commits .CommitIdx).Author.Username}}"
 		}
 
 		_, ok = cfg.Queues[i].Environment["AUTHOR_EMAIL"]
 		if !ok {
-			cfg.Queues[i].Environment["AUTHOR_EMAIL"] = "{{(index .PushEvent.Commits 0).Author.EMail}}"
+			cfg.Queues[i].Environment["AUTHOR_EMAIL"] = "{{(index .PushEvent.Commits .CommitIdx).Author.EMail}}"
 		}
 	}
 

@@ -23,11 +23,10 @@ webhook:
 notification:
 
 # Status API (Github)
-#  Token needs to be generated from github webinterface:
+#  Token needs to be generated from GitHub webinterface:
 #  user settings -> developer settings -> personal access tokens -> repo:status
 #
 #  statusapi:
-#    url: https://api.github.com/
 #    token:
 
 # SMTP / EMail

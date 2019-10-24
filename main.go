@@ -51,7 +51,6 @@ type config struct {
 	}
 	Notification struct {
 		StatusAPI struct {
-			URL   string
 			Token string
 		}
 		Email struct {
@@ -97,10 +96,11 @@ type gitPushEventData struct {
 	Secret     string `json:"secret"`
 	CommitID   string `json:"after"`
 	Repository struct {
-		Name     string `json:"name"`
-		FullName string `json:"full_name"`
-		HTMLURL  string `json:"html_url"`
-		CloneURL string `json:"clone_url"`
+		Name      string `json:"name"`
+		FullName  string `json:"full_name"`
+		HTMLURL   string `json:"html_url"`
+		StatusURL string `json:"statuses_url"`
+		CloneURL  string `json:"clone_url"`
 	} `json:"repository"`
 	Commits []struct {
 		Message string `json:"message"`
@@ -298,10 +298,9 @@ func (c *controller) sendStatusUpdate(j *job, b *build) error {
 		target = j.BaseURL
 	}
 
-	if c.cfg.Notification.StatusAPI.URL != "" {
-		url := fmt.Sprintf("%s/repos/%s/statuses/%s?access_token=%s",
-			c.cfg.Notification.StatusAPI.URL, j.PushEvent.Repository.FullName,
-			j.PushEvent.CommitID, c.cfg.Notification.StatusAPI.Token)
+	if c.cfg.Notification.StatusAPI.Token != "" {
+		url := strings.Replace(j.PushEvent.Repository.StatusURL, "{sha}", j.PushEvent.CommitID, -1)
+		url = url + "?access_token=" + c.cfg.Notification.StatusAPI.Token
 
 		jsonValue, _ := json.Marshal(map[string]string{
 			"state":      b.Status,
@@ -540,7 +539,6 @@ func parseConfig(file string) config {
 	cfg.Workdir, _ = filepath.Abs(cfg.Workdir)
 	cfg.Logdir, _ = filepath.Abs(cfg.Logdir)
 	cfg.Server.BaseURL = strings.TrimSuffix(cfg.Server.BaseURL, "/")
-	cfg.Notification.StatusAPI.URL = strings.TrimSuffix(cfg.Notification.StatusAPI.URL, "/")
 
 	for i := range cfg.Queues {
 		if cfg.Queues[i].PathMatch == "" {

@@ -41,6 +41,6 @@ SSH_DIR?=	/dev/null
 all: remote
 
 remote:
-	ssh ${SSH_URL} -t '/bin/sh -c "make -C ${SSH_DIR} -f ${SSH_RECIPE}"'
+	@ssh ${SSH_URL} -T '/bin/sh -c "make -C ${SSH_DIR} -f ${SSH_RECIPE}"'
 
 .PHONY: remote

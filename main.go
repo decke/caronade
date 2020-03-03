@@ -306,19 +306,24 @@ func (c *controller) sendStatusUpdate(j *job, b *build) error {
 
 	if c.cfg.Notification.StatusAPI.Token != "" {
 		url := strings.Replace(j.PushEvent.Repository.StatusURL, "{sha}", j.PushEvent.Commits[j.CommitIdx].CommitID, -1)
-		url = url + "?access_token=" + c.cfg.Notification.StatusAPI.Token
-
 		jsonValue, _ := json.Marshal(map[string]string{
 			"state":      b.Status,
 			"target_url": target,
 			"context":    j.Port + " on " + b.Queue,
 		})
 
-		_, err := http.Post(url, "application/json", bytes.NewBuffer(jsonValue))
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonValue))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "token " + c.cfg.Notification.StatusAPI.Token)
+
+		client := http.Client{}
+		resp, err := client.Do(req)
 
 		if err != nil {
 			log.Printf("StatusAPI request to %s failed: %s\n", url, err)
 		}
+
+		resp.Body.Close()
 	}
 
 	if c.cfg.Notification.Email.SmtpHost != "" && j.StatusOverall() != "pending" {

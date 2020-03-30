@@ -23,13 +23,17 @@
 			<div class="tile">
 				<name class="panel">
 					<p class="panel-heading">Build Jobs</p>
-					{{range .}}
+					<p class="panel-tabs">
+						<a {{if eq .Filter "today"}}class="is-active"{{end}} href="?when=today">Today</a>
+						<a {{if eq .Filter "all"}}class="is-active"{{end}} href="?when=all">All</a>
+					</p>
+					{{range .Jobs}}
 					<a class="panel-block" href="/builds/{{.ID}}/">
 						<span class="panel-icon icon icon-git-commit"></span>
 						{{.ID}} ({{.JobRuntime}})
 					</a>
 					{{else}}
-					<i>none</i>
+					<p class="panel-block"><i>none</i></p>
 					{{end}}
 				</nav>
 			</div>

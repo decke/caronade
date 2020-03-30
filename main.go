@@ -94,6 +94,11 @@ type build struct {
 	Enddate   time.Time
 }
 
+type jobs struct {
+	Filter string
+	Jobs   []job
+}
+
 type gitPushEventData struct {
 	Repository struct {
 		Name      string `json:"name"`
@@ -233,6 +238,13 @@ func (j *job) JobRuntime() string {
 	diff := j.Enddate.Sub(j.Startdate).Round(time.Second)
 
 	return fmt.Sprintf("%s", diff.String())
+}
+
+func (j *job) JobIsToday() bool {
+	start := j.Startdate
+	now := time.Now()
+
+	return (start.Year() == now.Year() && start.Month() == now.Month() && start.Day() == now.Day())
 }
 
 func (b *build) Runtime() string {
@@ -427,7 +439,16 @@ func (c *controller) handleJobListing(w http.ResponseWriter, r *http.Request) {
 		return files[i].ModTime().Unix() > files[j].ModTime().Unix()
 	})
 
-	jobs := make([]job, 0)
+	jobs := jobs{
+		Filter: r.URL.Query().Get("when"),
+		Jobs:   make([]job, 0),
+	}
+
+	if jobs.Filter == "" || jobs.Filter == "today" {
+		jobs.Filter = "today"
+	} else {
+		jobs.Filter = "all"
+	}
 
 	for _, f := range files {
 		t, _ := time.Parse("20060102-15:04:05.00000", f.Name())
@@ -442,7 +463,13 @@ func (c *controller) handleJobListing(w http.ResponseWriter, r *http.Request) {
 
 		job.BaseURL = fmt.Sprintf("%s/%s/%s/", c.cfg.Server.BaseURL, "builds", job.ID)
 
-		jobs = append(jobs, job)
+		if jobs.Filter == "today" {
+			if job.JobIsToday() {
+				jobs.Jobs = append(jobs.Jobs, job)
+			}
+		} else {
+			jobs.Jobs = append(jobs.Jobs, job)
+		}
 	}
 
 	tmpl, err := template.ParseFiles(path.Join(c.cfg.Tmpldir, "joblisting.html"))

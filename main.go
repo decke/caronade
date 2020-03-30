@@ -20,6 +20,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	texttemplate "text/template"
@@ -228,6 +229,12 @@ func (j *job) TimeNow() string {
 	return time.Now().Format(time.RFC850)
 }
 
+func (j *job) JobRuntime() string {
+	diff := j.Enddate.Sub(j.Startdate).Round(time.Second)
+
+	return fmt.Sprintf("%s", diff.String())
+}
+
 func (b *build) Runtime() string {
 	diff := b.Enddate.Sub(b.Startdate).Round(time.Second)
 
@@ -409,6 +416,48 @@ func (c *controller) startWorker(q *queue) {
 	}
 }
 
+func (c *controller) handleJobListing(w http.ResponseWriter, r *http.Request) {
+	files, err := ioutil.ReadDir(c.cfg.Logdir)
+	if err != nil {
+		http.Error(w, "Internal Error (dirlisting failed)", http.StatusInternalServerError)
+		return
+	}
+
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].ModTime().Unix() > files[j].ModTime().Unix()
+	})
+
+	jobs := make([]job, 0)
+
+	for _, f := range files {
+		t, _ := time.Parse("20060102-15:04:05.00000", f.Name())
+
+		job := job{
+			ID:        f.Name(),
+			Port:      "",
+			Startdate: t,
+			Enddate:   f.ModTime(),
+			BaseURL:   "",
+		}
+
+		job.BaseURL = fmt.Sprintf("%s/%s/%s/", c.cfg.Server.BaseURL, "builds", job.ID)
+
+		jobs = append(jobs, job)
+	}
+
+	tmpl, err := template.ParseFiles(path.Join(c.cfg.Tmpldir, "joblisting.html"))
+	if err != nil {
+		http.Error(w, "Internal Error (failed parsing template)", http.StatusInternalServerError)
+		return
+	}
+
+	err = tmpl.Execute(w, &jobs)
+	if err != nil {
+		http.Error(w, "Internal Error (failed executing template)", http.StatusInternalServerError)
+		return
+	}
+}
+
 func (c *controller) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	payload, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -488,7 +537,7 @@ func (c *controller) startHTTPD() {
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
-			fmt.Fprint(w, "nothing to see here")
+			c.handleJobListing(w, r)
 		} else {
 			c.handleWebhook(w, r)
 		}

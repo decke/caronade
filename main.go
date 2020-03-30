@@ -282,6 +282,11 @@ func (c *controller) renderBuildTemplate(j *job) {
 	outfile.Sync()
 }
 
+func (c *controller) writeJsonExport(j *job) {
+	file, _ := json.MarshalIndent(j, "", " ")
+	_ = ioutil.WriteFile(path.Join(c.cfg.Logdir, j.ID, "data.json"), file, 0644)
+}
+
 func (c *controller) renderEmailTemplate(j *job) string {
 	tmpl, err := texttemplate.ParseFiles(path.Join(c.cfg.Tmpldir, "email.txt"))
 	if err != nil {
@@ -387,6 +392,7 @@ func (c *controller) startWorker(q *queue) {
 
 			c.sendStatusUpdate(j, b)
 			c.renderBuildTemplate(j)
+			c.writeJsonExport(j)
 
 			env := os.Environ()
 			for k, v := range q.Environment {
@@ -422,6 +428,7 @@ func (c *controller) startWorker(q *queue) {
 			log.Printf("ID %s: %s on %s finished %s\n", j.ID, j.Port, q.Name, b.Status)
 			c.sendStatusUpdate(j, b)
 			c.renderBuildTemplate(j)
+			c.writeJsonExport(j)
 
 		case <-time.After(time.Second * 1):
 		}

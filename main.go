@@ -333,7 +333,7 @@ func (c *controller) sendStatusUpdate(j *job, b *build) error {
 
 		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonValue))
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "token " + c.cfg.Notification.StatusAPI.Token)
+		req.Header.Set("Authorization", "token "+c.cfg.Notification.StatusAPI.Token)
 
 		client := http.Client{}
 		resp, err := client.Do(req)

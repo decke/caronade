@@ -75,4 +75,3 @@ func parseConfig(file string) Config {
 
 	return cfg
 }
-

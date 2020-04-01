@@ -188,4 +188,3 @@ func (c *Controller) sendStatusUpdate(j *Job, b *Build) error {
 
 	return nil
 }
-

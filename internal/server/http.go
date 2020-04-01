@@ -204,4 +204,3 @@ func (c *Controller) startHTTPD() {
 		log.Printf("Listen failed: %s\n", err)
 	}
 }
-

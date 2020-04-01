@@ -64,4 +64,3 @@ func (b *Build) LogfileContent() string {
 
 	return string(raw)
 }
-

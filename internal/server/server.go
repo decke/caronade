@@ -117,4 +117,3 @@ func StartServer(cfgfile string) {
 
 	wg.Wait()
 }
-

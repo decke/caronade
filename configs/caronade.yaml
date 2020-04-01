@@ -39,23 +39,23 @@ notification:
 #    from: sender@domain.example
 
 queues:
-- name: 11.2/amd64
+- name: 11.3/amd64
   recipe: poudriere
   environment:
-    JAIL_NAME: 112amd64
-    PORTSTREE: 112amd64
+    JAIL_NAME: 113amd64
+    PORTSTREE: 113amd64
 
-- name: 12.0/i386
+- name: 12.1/i386
   recipe: poudriere
   environment:
-    JAIL_NAME: 120i386
-    PORTSTREE: 120i386
+    JAIL_NAME: 121i386
+    PORTSTREE: 121i386
 
-- name: 12.0/amd64
+- name: 12.1/amd64
   recipe: poudriere
   environment:
-    JAIL_NAME: 120amd64
-    PORTSTREE: 120amd64
+    JAIL_NAME: 121amd64
+    PORTSTREE: 121amd64
 
 - name: portlint
   recipe: portlint

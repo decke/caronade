@@ -1,15 +1,21 @@
-all: main.min.css
+DESTDIR?=	../build
 
-main.css:
-	sassc bulma.sass $@
+all: build
 
-main.min.css: main.css
-	minify -o $@ main.css
+caronade.css:
+	sassc caronade.sass $@
+
+caronade.min.css: caronade.css
+	minify -o $@ caronade.css
 
 clean:
-	rm -f main.min.css main.css
+	rm -f caronade.min.css caronade.css
 
-install:  main.min.css
-	cp -p main.min.css ../static/caronade.min.css
+install: caronade.min.css
+	mkdir -p $(DESTDIR)
+	mkdir -p $(DESTDIR)/builds
+	cp -pr static templates work $(DESTDIR)/
+	cp -p caronade.min.css $(DESTDIR)/static/
+	cp -p caronade.css $(DESTDIR)/static/
 
 .PHONY: all clean install

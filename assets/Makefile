@@ -1,17 +1,17 @@
 DESTDIR?=	../build
 
-all: build
+all: install
 
 caronade.css:
 	sassc caronade.sass $@
 
-caronade.min.css: caronade.css
-	minify -o $@ caronade.css
+caronade.min.css:
+	sassc -t compressed caronade.sass $@
 
 clean:
 	rm -f caronade.min.css caronade.css
 
-install: caronade.min.css
+install: caronade.css caronade.min.css
 	mkdir -p $(DESTDIR)
 	mkdir -p $(DESTDIR)/builds
 	cp -pr static templates work $(DESTDIR)/

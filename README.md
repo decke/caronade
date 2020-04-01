@@ -81,6 +81,51 @@ all or no queues. Per default if no such line is found build jobs are
 generated for all queues specified in `default_queues` in `caronade.yaml`.
 
 
+### Remote builders
+
+It's also possible to run build jobs on a remote machine as long as a SSH
+connection is available and caronade is also installed on both machines.
+For security reasons please create a dedicated ssh key for this connection.
+
+`~/.ssh/config:`
+```
+Host builder-azure
+  User root
+  HostName <VM-HOST-NAME>.cloudapp.azure.com
+  IdentityFile ~/.ssh/id_rsa_<VM-SSH-KEY>
+  IdentitiesOnly=yes
+  SendEnv JOB_ID COMMIT_ID REPO_URL JOB_PORT JAIL_NAME PORTSTREE PORTSDIR
+```
+
+`/etc/ssh/sshd_config:` (on builder-azure)
+```
+...
+# caronade
+AcceptEnv JOB_ID COMMIT_ID REPO_URL JOB_PORT JAIL_NAME PORTSTREE PORTSDIR
+```
+
+`/usr/local/etc/caronade/caronade.yaml:`
+```
+queues:
+- name: 12.1/amd64
+  recipe: ssh
+  environment:
+    SSH_URL: builder-azure
+    SSH_DIR: /usr/local/caronade/work/121amd64
+    SSH_RECIPE: /usr/local/caronade/work/poudriere.mk
+    JAIL_NAME: 121amd64
+    PORTSTREE: 121amd64
+
+- name: portlint
+  recipe: ssh
+  environment:
+    SSH_URL: builder-azure
+    SSH_DIR: /usr/local/caronade/work/portlint
+    SSH_RECIPE: /usr/local/caronade/work/portlint.mk
+    PORTSDIR: /usr/local/poudriere/ports/default
+```
+
+
 ## FAQ
 
 ### Why caronade?

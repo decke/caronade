@@ -1,7 +1,7 @@
 PREFIX?=	/usr/local
 DESTDIR?=	${.CURDIR:tA}/stage
 
-ETCDIR?=	${PREFIX}/etc
+ETCDIR?=	${PREFIX}/etc/caronade
 BINDIR?=	${PREFIX}/bin
 DATADIR?=	${PREFIX}/caronade
 

@@ -132,7 +132,7 @@ func (c *Controller) handleBuildDetails(ctx echo.Context) error {
 	}
 	buildid := ctx.Param("buildid")
 
-	file, _ := ioutil.ReadFile(path.Join(c.cfg.Logdir, buildid, "data.json"))
+	file, _ := ioutil.ReadFile(path.Join(c.cfg.Logdir, buildid, "jobdata.v1.json"))
 
 	_ = json.Unmarshal([]byte(file), &job)
 

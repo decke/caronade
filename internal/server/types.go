@@ -72,6 +72,7 @@ type Build struct {
 type Jobs struct {
 	Filter string
 	Jobs   []Job
+	Nonce  string
 }
 
 type GitPushEventData struct {

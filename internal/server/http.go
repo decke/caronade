@@ -13,6 +13,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/unrolled/secure"
 )
 
 type Template struct {
@@ -36,6 +37,7 @@ func (c *Controller) handleJobListing(ctx echo.Context) error {
 	jobs := Jobs{
 		Filter: ctx.FormValue("when"),
 		Jobs:   make([]Job, 0),
+		Nonce:  secure.CSPNonce(ctx.Request().Context()),
 	}
 
 	if jobs.Filter == "" || jobs.Filter == "today" {
@@ -129,10 +131,13 @@ func (c *Controller) Serve() {
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Gzip())
-	e.Use(middleware.SecureWithConfig(middleware.SecureConfig{
-		XFrameOptions:         "DENY",
-		ContentSecurityPolicy: "default-src 'none'; style-src 'self'; img-src 'self'; font-src 'self'",
-	}))
+
+	secureMiddleware := secure.New(secure.Options{
+		FrameDeny: true,
+		ContentSecurityPolicy: "default-src 'none'; style-src 'self'; img-src 'self'; font-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'strict-dynamic' $NONCE 'unsafe-inline' http: https:;",
+	})
+
+	e.Use(echo.WrapMiddleware(secureMiddleware.Handler))
 
 	e.Static("/static", c.cfg.Staticdir)
 	e.Static("/builds", c.cfg.Logdir)

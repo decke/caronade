@@ -4,7 +4,7 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<title>caronade Ports CI</title>
-		<link rel="stylesheet" href="/static/caronade.min.css">
+		<link rel="stylesheet" href="/static/caronade.min.css" nonce="{{.Nonce}}">
 		<link rel="icon" type="image/png" href="/static/favicon-32.png" sizes="32x32">
 		<link rel="icon" type="image/png" href="/static/favicon-96.png" sizes="96x96">
 	</head>
@@ -21,7 +21,7 @@
 
 		<section class="section">
 			<div class="tile">
-				<name class="panel">
+				<nav class="panel">
 					<p class="panel-heading">Build Jobs</p>
 					<p class="panel-tabs">
 						<a {{if eq .Filter "today"}}class="is-active"{{end}} href="?when=today">Today</a>

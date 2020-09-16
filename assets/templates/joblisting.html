@@ -28,7 +28,7 @@
 						<a {{if eq .Filter "all"}}class="is-active"{{end}} href="?when=all">All</a>
 					</p>
 					{{range .Jobs}}
-					<a class="panel-block" href="/builds/{{.ID}}/">
+					<a class="panel-block" href="/builds/{{.ID}}">
 						<span class="panel-icon icon icon-git-commit"></span>
 						{{.ID}} ({{.JobRuntime}})
 					</a>

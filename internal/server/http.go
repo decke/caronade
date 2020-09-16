@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -125,6 +126,19 @@ func (c *Controller) handleWebhook(ctx echo.Context) error {
 	return ctx.String(http.StatusOK, output)
 }
 
+func (c *Controller) handleBuildDetails(ctx echo.Context) error {
+	job := Job{
+		Nonce:  secure.CSPNonce(ctx.Request().Context()),
+	}
+	buildid := ctx.Param("buildid")
+
+	file, _ := ioutil.ReadFile(path.Join(c.cfg.Logdir, buildid, "data.json"))
+
+	_ = json.Unmarshal([]byte(file), &job)
+
+	return ctx.Render(http.StatusOK, "build.html", &job)
+}
+
 func (c *Controller) Serve() {
 	e := echo.New()
 	e.HideBanner = true
@@ -140,7 +154,6 @@ func (c *Controller) Serve() {
 	e.Use(echo.WrapMiddleware(secureMiddleware.Handler))
 
 	e.Static("/static", c.cfg.Staticdir)
-	e.Static("/builds", c.cfg.Logdir)
 
 	t := &Template{
 		templates: template.Must(template.ParseGlob(path.Join(c.cfg.Tmpldir, "*.html"))),
@@ -149,6 +162,7 @@ func (c *Controller) Serve() {
 	e.Renderer = t
 
 	e.GET("/", c.handleJobListing)
+	e.GET("/builds/:buildid", c.handleBuildDetails)
 
 	if c.cfg.Webhook.Secret != "" {
 		e.POST("/", c.handleWebhook, HmacAuth(c.cfg.Webhook.Secret))

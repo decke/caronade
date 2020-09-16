@@ -1,17 +1,14 @@
 package server
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"net/smtp"
-	"os"
 	"path"
 	"regexp"
 	"strings"
@@ -90,26 +87,6 @@ NEXTQUEUE:
 	}
 
 	return queues
-}
-
-func (c *Controller) renderBuildTemplate(j *Job) {
-	tmpl, err := template.ParseFiles(path.Join(c.cfg.Tmpldir, "index.html"))
-	if err != nil {
-		log.Printf("Failed parsing template: %v", err)
-		return
-	}
-
-	outfile, _ := os.Create(path.Join(c.cfg.Logdir, j.ID, "index.html"))
-	defer outfile.Close()
-
-	writer := bufio.NewWriter(outfile)
-	err = tmpl.Execute(writer, &j)
-	if err != nil {
-		log.Printf("Failed executing template: %v", err)
-		return
-	}
-	writer.Flush()
-	outfile.Sync()
 }
 
 func (c *Controller) writeJsonExport(j *Job) {

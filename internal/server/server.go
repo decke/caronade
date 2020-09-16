@@ -47,7 +47,6 @@ func (c *Controller) startWorker(q *Queue) {
 			os.MkdirAll(path.Join(c.cfg.Logdir, j.ID), os.ModePerm)
 
 			c.sendStatusUpdate(j, b)
-			c.renderBuildTemplate(j)
 			c.writeJsonExport(j)
 
 			env := os.Environ()
@@ -83,7 +82,6 @@ func (c *Controller) startWorker(q *Queue) {
 
 			log.Printf("ID %s: %s on %s finished %s\n", j.ID, j.Port, q.Name, b.Status)
 			c.sendStatusUpdate(j, b)
-			c.renderBuildTemplate(j)
 			c.writeJsonExport(j)
 
 		case <-time.After(time.Second * 1):

@@ -43,11 +43,8 @@ func (j *Job) JobRuntime() string {
 	return fmt.Sprintf("%s", diff.String())
 }
 
-func (j *Job) JobIsToday() bool {
-	start := j.Startdate
-	now := time.Now()
-
-	return (start.Year() == now.Year() && start.Month() == now.Month() && start.Day() == now.Day())
+func (j *Job) ShortCommitID() string {
+	return j.PushEvent.Commits[j.CommitIdx].CommitID[0:7]
 }
 
 func (b *Build) Runtime() string {

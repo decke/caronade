@@ -13,30 +13,62 @@
 		<nav class="navbar is-light" role="navigation" aria-label="main navigation">
 			<div class="navbar-brand">
 				<a class="navbar-item">
-					<img class="img" src="../../static/logo.png" alt="logo" />
+					<img class="img" src="/static/logo.png" alt="logo" />
 				</a>
 				<a class="navbar-item">caronade</a>
 			</div>
 		</nav>
 
 		<section class="section">
-			<div class="tile">
-				<nav class="panel">
-					<p class="panel-heading">Build Jobs</p>
-					<p class="panel-tabs">
-						<a {{if eq .Filter "today"}}class="is-active"{{end}} href="?when=today">Today</a>
-						<a {{if eq .Filter "all"}}class="is-active"{{end}} href="?when=all">All</a>
-					</p>
-					{{range .Jobs}}
-					<a class="panel-block" href="/builds/{{.ID}}">
-						<span class="panel-icon icon icon-git-commit"></span>
-						{{.ID}} ({{.JobRuntime}})
-					</a>
-					{{else}}
-					<p class="panel-block"><i>none</i></p>
-					{{end}}
-				</nav>
+			{{range .Jobs}}
+			<div class="box">
+				<article class="media">
+					<div class="media-left">
+						<span class="icon icon-{{.StatusOverall}}"></span>
+					</div>
+					<div class="media-content">
+						<div class="content">
+							<a href="/builds/{{.ID}}">{{(index .PushEvent.Commits .CommitIdx).Message}}</a>
+						</div>
+						<div class="level-left">
+							<div class="field is-grouped is-grouped-multiline">
+								<div class="control">
+									<div class="tags has-addons">
+										<span class="tag is-light">author</span>
+										<a class="tag is-primary is-light" href="https://github.com/{{(index .PushEvent.Commits .CommitIdx).Author.Username}}">{{(index .PushEvent.Commits .CommitIdx).Author.Username}}</a>
+									</div>
+								</div>
+								<div class="control">
+									<div class="tags has-addons">
+										<span class="tag is-light">commit</span>
+										<a class="tag is-link is-light" href="{{(index .PushEvent.Commits .CommitIdx).URL}}">{{.ShortCommitID}}</a>
+									</div>
+								</div>
+								<div class="control">
+									<div class="tags has-addons">
+										<span class="tag is-light">port</span>
+										<a class="tag is-danger is-light" href="https://www.freshports.org/{{.Port}}">{{.Port}}</a>
+									</div>
+								</div>
+								<div class="control">
+									<div class="tags has-addons">
+										<span class="tag is-light">build start</span>
+										<span class="tag is-info is-light">{{.StartDate}}</span>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="media-right">
+						<p>{{.JobRuntime}}</p>
+					</div>
+				</article>
 			</div>
+
+			<br />
+			{{else}}
+			<p><i>none</i></p>
+			{{end}}
 		</section>
 
 		<footer class="footer">

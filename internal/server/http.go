@@ -36,37 +36,21 @@ func (c *Controller) handleJobListing(ctx echo.Context) error {
 	})
 
 	jobs := Jobs{
-		Filter: ctx.FormValue("when"),
-		Jobs:   make([]Job, 0),
-		Nonce:  secure.CSPNonce(ctx.Request().Context()),
-	}
-
-	if jobs.Filter == "" || jobs.Filter == "today" {
-		jobs.Filter = "today"
-	} else {
-		jobs.Filter = "all"
+		Jobs:  make([]Job, 0),
+		Nonce: secure.CSPNonce(ctx.Request().Context()),
 	}
 
 	for _, f := range files {
-		t, _ := time.Parse("20060102-15:04:05.00000", f.Name())
+		job := Job{}
 
-		job := Job{
-			ID:        f.Name(),
-			Port:      "",
-			Startdate: t,
-			Enddate:   f.ModTime(),
-			BaseURL:   "",
+		file, err := ioutil.ReadFile(path.Join(c.cfg.Logdir, f.Name(), "jobdata.v1.json"))
+		if err != nil {
+			continue
 		}
 
-		job.BaseURL = fmt.Sprintf("%s/%s/%s/", c.cfg.Server.BaseURL, "builds", job.ID)
+		_ = json.Unmarshal([]byte(file), &job)
 
-		if jobs.Filter == "today" {
-			if job.JobIsToday() {
-				jobs.Jobs = append(jobs.Jobs, job)
-			}
-		} else {
-			jobs.Jobs = append(jobs.Jobs, job)
-		}
+		jobs.Jobs = append(jobs.Jobs, job)
 	}
 
 	return ctx.Render(http.StatusOK, "joblisting.html", &jobs)
@@ -129,7 +113,7 @@ func (c *Controller) handleWebhook(ctx echo.Context) error {
 func (c *Controller) handleBuildDetails(ctx echo.Context) error {
 	buildid := ctx.Param("buildid")
 	job := Job{
-		Nonce:  secure.CSPNonce(ctx.Request().Context()),
+		Nonce: secure.CSPNonce(ctx.Request().Context()),
 	}
 
 	file, err := ioutil.ReadFile(path.Join(c.cfg.Logdir, buildid, "jobdata.v1.json"))

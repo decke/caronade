@@ -89,7 +89,7 @@ func HmacAuthWithConfig(config HmacAuthConfig) echo.MiddlewareFunc {
 	}
 }
 
-func DefaultHmacAuthValidator(payload []byte, signature string, secret string, c echo.Context) (bool, error) {
+func DefaultHmacAuthValidator(payload []byte, secret string, signature string, c echo.Context) (bool, error) {
 	mac := hmac.New(sha1.New, []byte(secret))
 	mac.Write(payload)
 

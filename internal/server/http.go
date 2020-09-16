@@ -66,7 +66,7 @@ func (c *Controller) handleJobListing(ctx echo.Context) error {
 		}
 	}
 
-	return ctx.Render(http.StatusOK, "joblisting", &jobs)
+	return ctx.Render(http.StatusOK, "joblisting.html", &jobs)
 }
 
 func (c *Controller) handleWebhook(ctx echo.Context) error {

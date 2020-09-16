@@ -127,12 +127,15 @@ func (c *Controller) handleWebhook(ctx echo.Context) error {
 }
 
 func (c *Controller) handleBuildDetails(ctx echo.Context) error {
+	buildid := ctx.Param("buildid")
 	job := Job{
 		Nonce:  secure.CSPNonce(ctx.Request().Context()),
 	}
-	buildid := ctx.Param("buildid")
 
-	file, _ := ioutil.ReadFile(path.Join(c.cfg.Logdir, buildid, "jobdata.v1.json"))
+	file, err := ioutil.ReadFile(path.Join(c.cfg.Logdir, buildid, "jobdata.v1.json"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "BuildID not found")
+	}
 
 	_ = json.Unmarshal([]byte(file), &job)
 

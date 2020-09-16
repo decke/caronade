@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"time"
 )
 
@@ -45,6 +46,14 @@ func (j *Job) JobRuntime() string {
 
 func (j *Job) ShortCommitID() string {
 	return j.PushEvent.Commits[j.CommitIdx].CommitID[0:7]
+}
+
+func (j *Job) ShortCommitMessage() string {
+	for _, line := range strings.Split(strings.TrimSuffix(j.PushEvent.Commits[j.CommitIdx].Message, "\n"), "\n") {
+		return line
+	}
+
+	return ""
 }
 
 func (b *Build) Runtime() string {

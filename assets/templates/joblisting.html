@@ -28,7 +28,7 @@
 					</div>
 					<div class="media-content">
 						<div class="content">
-							<a href="/builds/{{.ID}}">{{(index .PushEvent.Commits .CommitIdx).Message}}</a>
+							<a href="/builds/{{.ID}}">{{.ShortCommitMessage}}</a>
 						</div>
 						<div class="level-left">
 							<div class="field is-grouped is-grouped-multiline">

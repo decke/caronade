@@ -97,7 +97,7 @@ func StartServer(cfgfile string) {
 
 	ctrl := Controller{
 		wg:     &wg,
-		cfg:    &cfg,
+		cfg:    cfg,
 		queues: make(map[string]*Queue),
 	}
 
@@ -113,7 +113,7 @@ func StartServer(cfgfile string) {
 	}
 
 	wg.Add(1)
-	go ctrl.startHTTPD()
+	go ctrl.Serve()
 
 	wg.Wait()
 }

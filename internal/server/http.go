@@ -133,7 +133,7 @@ func (c *Controller) Serve() {
 	e.Use(middleware.Gzip())
 
 	secureMiddleware := secure.New(secure.Options{
-		FrameDeny: true,
+		FrameDeny:             true,
 		ContentSecurityPolicy: "default-src 'none'; style-src 'self'; img-src 'self'; font-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'strict-dynamic' $NONCE 'unsafe-inline' http: https:;",
 	})
 

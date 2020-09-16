@@ -134,7 +134,7 @@ func (c *Controller) Serve() {
 
 	secureMiddleware := secure.New(secure.Options{
 		FrameDeny:             true,
-		ContentSecurityPolicy: "default-src 'none'; style-src 'self'; img-src 'self'; font-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'strict-dynamic' $NONCE 'unsafe-inline' http: https:;",
+		ContentSecurityPolicy: "default-src 'none'; style-src 'self'; img-src 'self' data:; font-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'strict-dynamic' $NONCE 'unsafe-inline' http: https:;",
 	})
 
 	e.Use(echo.WrapMiddleware(secureMiddleware.Handler))

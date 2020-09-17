@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"time"
 )
 
@@ -43,11 +44,16 @@ func (j *Job) JobRuntime() string {
 	return fmt.Sprintf("%s", diff.String())
 }
 
-func (j *Job) JobIsToday() bool {
-	start := j.Startdate
-	now := time.Now()
+func (j *Job) ShortCommitID() string {
+	return j.PushEvent.Commits[j.CommitIdx].CommitID[0:7]
+}
 
-	return (start.Year() == now.Year() && start.Month() == now.Month() && start.Day() == now.Day())
+func (j *Job) ShortCommitMessage() string {
+	for _, line := range strings.Split(strings.TrimSuffix(j.PushEvent.Commits[j.CommitIdx].Message, "\n"), "\n") {
+		return line
+	}
+
+	return ""
 }
 
 func (b *Build) Runtime() string {

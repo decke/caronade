@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func parseConfig(file string) Config {
+func parseConfig(file string) *Config {
 	f, err := os.Open(file)
 	if err != nil {
 		log.Fatalf("Error: %v", err)
@@ -73,5 +73,5 @@ func parseConfig(file string) Config {
 		}
 	}
 
-	return cfg
+	return &cfg
 }

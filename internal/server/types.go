@@ -58,6 +58,7 @@ type Job struct {
 	PushEvent GitPushEventData
 	CommitIdx int
 	BaseURL   string
+	Nonce     string
 }
 
 type Build struct {
@@ -72,6 +73,7 @@ type Build struct {
 type Jobs struct {
 	Filter string
 	Jobs   []Job
+	Nonce  string
 }
 
 type GitPushEventData struct {

@@ -141,6 +141,7 @@ func (c *Controller) Serve() {
 	e.Use(echo.WrapMiddleware(secureMiddleware.Handler))
 
 	e.Static("/static", c.cfg.Staticdir)
+	e.Static("/logs", c.cfg.Logdir)
 
 	t := &Template{
 		templates: template.Must(template.ParseGlob(path.Join(c.cfg.Tmpldir, "*.html"))),
@@ -149,7 +150,7 @@ func (c *Controller) Serve() {
 	e.Renderer = t
 
 	e.GET("/", c.handleJobListing)
-	e.GET("/builds/:buildid", c.handleBuildDetails)
+	e.GET("/builds/:buildid/", c.handleBuildDetails)
 
 	if c.cfg.Webhook.Secret != "" {
 		e.POST("/", c.handleWebhook, HmacAuth(c.cfg.Webhook.Secret))

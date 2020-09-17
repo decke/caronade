@@ -28,7 +28,8 @@
 					</div>
 					<div class="media-content">
 						<div class="content">
-							<a href="/builds/{{.ID}}">{{.ShortCommitMessage}}</a>
+							<a href="/builds/{{.ID}}/">{{.ShortCommitMessage}}</a>
+							<button class="button is-small is-static is-pulled-right">{{.JobRuntime}}</button>
 						</div>
 						<div class="level-left">
 							<div class="field is-grouped is-grouped-multiline">
@@ -58,9 +59,6 @@
 								</div>
 							</div>
 						</div>
-					</div>
-					<div class="media-right">
-						<p>{{.JobRuntime}}</p>
 					</div>
 				</article>
 			</div>

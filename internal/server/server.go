@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -56,6 +55,8 @@ func (c *Controller) startWorker(q *Queue) {
 			}
 
 			os.MkdirAll(q.Workdir, os.ModePerm)
+			b.Logfile = path.Join(c.cfg.Logdir, j.ID, b.ID+".log")
+			logfile, _ := os.Create(b.Logfile)
 
 			cmd := exec.Cmd{
 				Dir:  q.Workdir,
@@ -68,7 +69,11 @@ func (c *Controller) startWorker(q *Queue) {
 					"all",
 				},
 			}
-			output, err := cmd.CombinedOutput()
+			defer logfile.Close()
+			cmd.Stdout = logfile
+			cmd.Stderr = logfile
+
+			err := cmd.Run()
 			if err != nil {
 				b.Status = "failure"
 			} else {
@@ -76,9 +81,6 @@ func (c *Controller) startWorker(q *Queue) {
 			}
 			b.Enddate = time.Now()
 			j.Enddate = time.Now()
-
-			b.Logfile = path.Join(c.cfg.Logdir, j.ID, b.ID+".log")
-			ioutil.WriteFile(b.Logfile, output, 0644)
 
 			log.Printf("ID %s: %s on %s finished %s\n", j.ID, j.Port, q.Name, b.Status)
 			c.sendStatusUpdate(j, b)

@@ -77,7 +77,6 @@
 					</div>
 
 					{{range .Build}}
-						{{if ne .Status "pending"}}
 						<div class="tile is-parent">
 							<article class="tile is-child box">
 								<div class="block">
@@ -90,7 +89,6 @@
 								</div>
 							</article>
 						</div>
-						{{end}}
 					{{end}}
 
 				</div>

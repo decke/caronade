@@ -57,6 +57,10 @@
 										<span class="tag is-primary is-light">{{.StartDate}}</span>
 									</div>
 								</div>
+
+								{{if eq .StatusOverall "pending"}}
+								<progress class="progress is-small" value="{{.Progress}}" max="100">{{.Progress}}%</progress>
+								{{end}}
 							</div>
 						</div>
 					</div>

@@ -26,6 +26,20 @@ func (j *Job) StatusOverall() string {
 	return "success"
 }
 
+func (j *Job) Progress() int {
+	jobs := 0.0
+	done := 0.0
+
+	for _, b := range j.Build {
+		jobs += 1
+		if b.Status == "failure" || b.Status == "success" {
+			done += 1
+		}
+	}
+
+	return int((done/jobs)*100.0)
+}
+
 func (j *Job) StartDate() string {
 	return j.Startdate.Format(time.RFC850)
 }
@@ -40,6 +54,10 @@ func (j *Job) TimeNow() string {
 
 func (j *Job) JobRuntime() string {
 	diff := j.Enddate.Sub(j.Startdate).Round(time.Second)
+
+	if j.StatusOverall() == "pending" {
+		diff = time.Now().Sub(j.Startdate).Round(time.Second)
+	}
 
 	return fmt.Sprintf("%s", diff.String())
 }

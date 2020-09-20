@@ -112,17 +112,11 @@ func (c *Controller) renderEmailTemplate(j *Job) string {
 }
 
 func (c *Controller) sendStatusUpdate(j *Job, b *Build) error {
-	target := ""
-
-	if b.Status != "pending" {
-		target = j.BaseURL
-	}
-
 	if c.cfg.Notification.StatusAPI.Token != "" {
 		url := strings.Replace(j.PushEvent.Repository.StatusURL, "{sha}", j.PushEvent.Commits[j.CommitIdx].CommitID, -1)
 		jsonValue, _ := json.Marshal(map[string]string{
 			"state":      b.Status,
-			"target_url": target,
+			"target_url": j.BaseURL,
 			"context":    j.Port + " on " + b.Queue,
 		})
 
@@ -140,7 +134,7 @@ func (c *Controller) sendStatusUpdate(j *Job, b *Build) error {
 		resp.Body.Close()
 	}
 
-	if c.cfg.Notification.Email.SmtpHost != "" && j.StatusOverall() != "pending" {
+	if c.cfg.Notification.Email.SmtpHost != "" && j.StatusOverall() != "waiting" && j.StatusOverall() != "building" {
 		data := c.renderEmailTemplate(j)
 		if data != "" {
 			var auth smtp.Auth

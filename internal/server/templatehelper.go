@@ -9,11 +9,22 @@ import (
 
 func (j *Job) StatusOverall() string {
 
-	// status: pending | failure | success
+	// status: waiting | building | failure | success
+	allwaiting := true
 
 	for _, b := range j.Build {
-		if b.Status == "pending" {
-			return b.Status
+		if b.Status != "waiting" {
+			allwaiting = false
+		}
+	}
+
+	if allwaiting {
+		return "waiting"
+	}
+
+	for _, b := range j.Build {
+		if b.Status == "building" || b.Status == "waiting" {
+			return "building"
 		}
 	}
 
@@ -37,7 +48,7 @@ func (j *Job) Progress() int {
 		}
 	}
 
-	return int((done/jobs)*100.0)
+	return int((done / jobs) * 100.0)
 }
 
 func (j *Job) StartDate() string {
@@ -55,7 +66,7 @@ func (j *Job) TimeNow() string {
 func (j *Job) JobRuntime() string {
 	diff := j.Enddate.Sub(j.Startdate).Round(time.Second)
 
-	if j.StatusOverall() == "pending" {
+	if j.StatusOverall() == "waiting" || j.StatusOverall() == "building" {
 		diff = time.Now().Sub(j.Startdate).Round(time.Second)
 	}
 

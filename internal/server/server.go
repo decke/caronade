@@ -40,6 +40,7 @@ func (c *Controller) startWorker(q *Queue) {
 		case j = <-q.Queue:
 			b := j.Build[q.Name]
 			b.Startdate = time.Now()
+			b.Status = "building"
 
 			log.Printf("ID %s: %s started on %s\n", j.ID, j.Port, q.Name)
 

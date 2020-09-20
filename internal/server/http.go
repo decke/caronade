@@ -91,7 +91,7 @@ func (c *Controller) handleWebhook(ctx echo.Context) error {
 				b := Build{
 					ID:     fmt.Sprintf("%03d", cnt+1),
 					Queue:  q.Name,
-					Status: "pending",
+					Status: "waiting",
 				}
 				job.Build[q.Name] = &b
 
@@ -104,6 +104,8 @@ func (c *Controller) handleWebhook(ctx echo.Context) error {
 				}
 			}
 			output = output + fmt.Sprintf("ID %s: %d jobs for port %s\n", job.ID, cnt, job.Port)
+
+			c.writeJsonExport(&job)
 		}
 	}
 

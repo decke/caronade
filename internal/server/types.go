@@ -64,7 +64,7 @@ type Job struct {
 type Build struct {
 	ID        string
 	Queue     string
-	Status    string
+	Status    string // waiting, building, failure success
 	Logfile   string
 	Startdate time.Time
 	Enddate   time.Time

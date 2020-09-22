@@ -88,6 +88,10 @@ func (j *Job) ShortCommitMessage() string {
 func (b *Build) Runtime() string {
 	diff := b.Enddate.Sub(b.Startdate).Round(time.Second)
 
+	if b.Status == "waiting" || b.Status == "building" {
+		diff = time.Now().Sub(b.Startdate).Round(time.Second)
+	}
+
 	return fmt.Sprintf("%s", diff.String())
 }
 

@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"path"
 	"sort"
 	"time"
@@ -85,6 +86,7 @@ func (c *Controller) handleWebhook(ctx echo.Context) error {
 			}
 
 			job.BaseURL = fmt.Sprintf("%s/%s/%s/", c.cfg.Server.BaseURL, "builds", job.ID)
+			os.MkdirAll(path.Join(c.cfg.Logdir, job.ID), os.ModePerm)
 
 			cnt := 0
 			for _, q := range c.matchQueues(*data, job.CommitIdx) {
@@ -94,6 +96,7 @@ func (c *Controller) handleWebhook(ctx echo.Context) error {
 					Status: "waiting",
 				}
 				job.Build[q.Name] = &b
+				c.writeJsonExport(&job)
 
 				select {
 				case q.Queue <- &job:
@@ -104,8 +107,6 @@ func (c *Controller) handleWebhook(ctx echo.Context) error {
 				}
 			}
 			output = output + fmt.Sprintf("ID %s: %d jobs for port %s\n", job.ID, cnt, job.Port)
-
-			c.writeJsonExport(&job)
 		}
 	}
 

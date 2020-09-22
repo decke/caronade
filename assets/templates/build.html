@@ -70,7 +70,7 @@
 							<nav class="tile is-child panel">
 								{{range .Build}}
 								<a class="panel-block" href="#log-{{.ID}}"><span class="icon icon-{{.Status}}"></span> &nbsp; {{.Queue}}
-									{{if ne .Status "pending"}}({{.Runtime}}){{end}}</a>
+									{{if ne .Status "waiting"}}({{.Runtime}}){{end}}</a>
 								{{end}}
 							</nav>
 						</div>

@@ -44,8 +44,6 @@ func (c *Controller) startWorker(q *Queue) {
 
 			log.Printf("ID %s: %s started on %s\n", j.ID, j.Port, q.Name)
 
-			os.MkdirAll(path.Join(c.cfg.Logdir, j.ID), os.ModePerm)
-
 			c.sendStatusUpdate(j, b)
 			c.writeJsonExport(j)
 

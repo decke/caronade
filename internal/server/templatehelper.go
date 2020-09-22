@@ -103,3 +103,15 @@ func (b *Build) LogfileContent() string {
 
 	return string(raw)
 }
+
+func (d *GitPushEventData) ShortBranch() string {
+	branch := ""
+
+	for _, part := range strings.Split(d.Branch, "/") {
+		if part != "refs" && part != "heads" {
+			branch = branch + part + "/"
+		}
+	}
+
+	return strings.TrimRight(branch, "/")
+}

@@ -44,6 +44,12 @@
 												</div>
 												<div class="control">
 													<div class="tags has-addons">
+														<span class="tag is-light"><span class="is-small icon icon-branch"></span></span>
+														<a class="tag is-info is-light" href="{{.PushEvent.Repository.HTMLURL}}/tree/{{.PushEvent.Branch}}">{{.PushEvent.ShortBranch}}</a>
+													</div>
+												</div>
+												<div class="control">
+													<div class="tags has-addons">
 														<span class="tag is-light"><span class="is-small icon icon-commit"></span></span>
 														<a class="tag is-info is-light" href="{{(index .PushEvent.Commits .CommitIdx).URL}}">{{.ShortCommitID}}</a>
 													</div>

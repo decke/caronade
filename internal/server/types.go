@@ -77,7 +77,7 @@ type Jobs struct {
 }
 
 type GitPushEventData struct {
-	Branch string `json:"ref"`
+	Branch     string `json:"ref"`
 	Repository struct {
 		Name      string `json:"name"`
 		FullName  string `json:"full_name"`

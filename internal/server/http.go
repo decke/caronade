@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"path"
 	"sort"
 	"time"
@@ -117,6 +118,11 @@ func (c *Controller) handleBuildDetails(ctx echo.Context) error {
 	buildid := ctx.Param("buildid")
 	job := Job{
 		Nonce: secure.CSPNonce(ctx.Request().Context()),
+	}
+
+	match, err := regexp.MatchString("^[0-9:.-]*$", buildid)
+	if !match {
+		return echo.NewHTTPError(http.StatusNotFound, "BuildID has invalid format")
 	}
 
 	file, err := ioutil.ReadFile(path.Join(c.cfg.Logdir, buildid, "jobdata.v1.json"))

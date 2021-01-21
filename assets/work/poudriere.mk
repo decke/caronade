@@ -68,7 +68,17 @@ prepare:
 	poudriere ports -u -p ${PORTSTREE}
 	zfs snapshot ${ZPORTSFS}@clean
 
-	(cd ${REPODIR} && find * \! -path "Mk/*" -type d -depth +0 -maxdepth 1 \
+	@(test -d ${REPODIR}/Mk && cd ${REPODIR} && find Mk -type f -depth +0 -maxdepth 1 \
+		-exec echo overlay {} \; \
+		-exec sh -c 'cp -p ${REPODIR}/`echo {}` ${PORTSPATH}/`echo {}`' \; \
+		|| true )
+
+	@(test -d ${REPODIR}/Mk/Uses && cd ${REPODIR} && find Mk/Uses -type f \
+		-exec echo overlay {} \; \
+		-exec sh -c 'cp -p ${REPODIR}/`echo {}` ${PORTSPATH}/`echo {}`' \; \
+		|| true )
+
+	@(cd ${REPODIR} && find * \! -path "Mk/*" -type d -depth +0 -maxdepth 1 \
 		-exec echo overlay for {} \; \
 		-exec sh -c 'rm -rf ${PORTSPATH}/`echo {}`' \; \
 		-exec sh -c 'cp -pr ${REPODIR}/`echo {}` ${PORTSPATH}/`echo {}`' \; )

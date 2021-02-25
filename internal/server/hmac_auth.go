@@ -5,7 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha1"
 	"fmt"
-	"io/ioutil"
+	"io"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -73,9 +73,9 @@ func HmacAuthWithConfig(config HmacAuthConfig) echo.MiddlewareFunc {
 			// Request
 			reqBody := []byte{}
 			if c.Request().Body != nil { // Read
-				reqBody, _ = ioutil.ReadAll(c.Request().Body)
+				reqBody, _ = io.ReadAll(c.Request().Body)
 			}
-			c.Request().Body = ioutil.NopCloser(bytes.NewBuffer(reqBody)) // Reset
+			c.Request().Body = io.NopCloser(bytes.NewBuffer(reqBody)) // Reset
 
 			valid, err := config.Validator(reqBody, config.Secret, signature, c)
 			if err != nil {

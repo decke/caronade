@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"net/smtp"
+	"os"
 	"path"
 	"regexp"
 	"strings"
@@ -91,7 +91,7 @@ NEXTQUEUE:
 
 func (c *Controller) writeJsonExport(j *Job) {
 	file, _ := json.MarshalIndent(j, "", " ")
-	_ = ioutil.WriteFile(path.Join(c.cfg.Logdir, j.ID, "jobdata.v1.json"), file, 0644)
+	_ = os.WriteFile(path.Join(c.cfg.Logdir, j.ID, "jobdata.v1.json"), file, 0644)
 }
 
 func (c *Controller) renderEmailTemplate(j *Job) string {

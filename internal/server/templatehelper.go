@@ -2,7 +2,7 @@ package server
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 	"time"
 )
@@ -96,7 +96,7 @@ func (b *Build) Runtime() string {
 }
 
 func (b *Build) LogfileContent() string {
-	raw, err := ioutil.ReadFile(b.Logfile)
+	raw, err := os.ReadFile(b.Logfile)
 	if err != nil {
 		return ""
 	}

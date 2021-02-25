@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -28,13 +27,15 @@ func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Con
 }
 
 func (c *Controller) handleJobListing(ctx echo.Context) error {
-	files, err := ioutil.ReadDir(c.cfg.Logdir)
+	files, err := os.ReadDir(c.cfg.Logdir)
 	if err != nil {
 		return ctx.String(http.StatusInternalServerError, "Internal Error (dirlisting failed)")
 	}
 
 	sort.Slice(files, func(i, j int) bool {
-		return files[i].ModTime().Unix() > files[j].ModTime().Unix()
+		file1, _ := files[i].Info()
+		file2, _ := files[j].Info()
+		return file1.ModTime().Unix() > file2.ModTime().Unix()
 	})
 
 	jobs := Jobs{
@@ -45,7 +46,7 @@ func (c *Controller) handleJobListing(ctx echo.Context) error {
 	for _, f := range files {
 		job := Job{}
 
-		file, err := ioutil.ReadFile(path.Join(c.cfg.Logdir, f.Name(), "jobdata.v1.json"))
+		file, err := os.ReadFile(path.Join(c.cfg.Logdir, f.Name(), "jobdata.v1.json"))
 		if err != nil {
 			continue
 		}
@@ -125,7 +126,7 @@ func (c *Controller) handleBuildDetails(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "BuildID has invalid format")
 	}
 
-	file, err := ioutil.ReadFile(path.Join(c.cfg.Logdir, buildid, "jobdata.v1.json"))
+	file, err := os.ReadFile(path.Join(c.cfg.Logdir, buildid, "jobdata.v1.json"))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusNotFound, "BuildID not found")
 	}
